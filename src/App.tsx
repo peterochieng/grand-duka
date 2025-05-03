@@ -20,6 +20,8 @@ import SellerDashboard from './components/seller/SellerDashboard';
 import RetailShopDashboard from './pages/RetailShopDashboard';
 import EditListing from './components/seller/listing/EditListing';
 import { AuthGuard } from '@/components/auth/AuthGuard';
+import SearchResults from './components/SearchResults';
+import ProductDetail from './pages/ProductDetail';
 
 function App() {
   return (
@@ -31,6 +33,7 @@ function App() {
           <Route path="/login" element={<SignIn />} />
           <Route path="/signup" element={<SignUp />} />
           <Route path="/kyc-verification" element={<KycVerification />} />
+          <Route path="/product/:id" element={<ProductDetail />} />
 
           {/* Routes that are available publicly */}
           <Route path="/retail" element={<Retail />} />
@@ -88,6 +91,9 @@ function App() {
               </AuthGuard>
             }
           />
+
+          {/* New Search Route */}
+        <Route path="/search" element={<SearchResults />} />
 
           {/* Seller Routes */}
           <Route path="/retail/seller-dashboard/*" 

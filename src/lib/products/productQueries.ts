@@ -4,6 +4,7 @@ import { productListings } from '@/data/listings';
 import { products } from './index';
 import { convertListingToProduct } from './listingConverter';
 import { generateMockProductsForCategory } from './mockGenerators';
+import { supabase } from '@/integrations/supabase/client';
 
 // Cache for mock products to ensure they're available to getProductById
 const mockProductsCache: Record<string, Product[]> = {};
@@ -90,4 +91,34 @@ export const getProductsByCategory = (category: string): Product[] => {
   }
   
   return combinedProducts;
+};
+
+
+// This function fetches all products from the database.
+export const fetchAllProducts = async (): Promise<Product[]> => {
+  const { data, error } = await supabase
+    .from('products')
+    .select('*')
+    .order('created_at', { ascending: false }); // Adjust the order if needed
+
+  if (error) {
+    console.error('Error fetching all products:', error);
+    throw error;
+  }
+  return data || [];
+};
+
+// Use this function in your search query to filter products.
+export const getProducts = async (query: string): Promise<Product[]> => {
+  // Get all products from the database
+  const allProducts = await fetchAllProducts();
+  
+  // If no search query is provided, return all products
+  if (!query.trim()) return allProducts;
+  
+  // Filter the products based on query matching in title or description
+  return allProducts.filter((product) =>
+    product.title.toLowerCase().includes(query.toLowerCase()) ||
+    product.description.toLowerCase().includes(query.toLowerCase())
+  );
 };

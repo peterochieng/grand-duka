@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -13,8 +12,8 @@ interface SearchBarProps {
   initialValue?: string;
 }
 
-export const SearchBar = ({ 
-  isMobile, 
+export const SearchBar = ({
+  isMobile,
   placeholder = "Search products, brands, categories...",
   onSearch,
   className = "",
@@ -29,13 +28,9 @@ export const SearchBar = ({
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("Searching for:", searchTerm);
-    
     if (onSearch) {
-      // Use custom search handler if provided
       onSearch(searchTerm);
     } else {
-      // Default behavior: navigate to search results
       if (searchTerm.trim()) {
         navigate(`/search?q=${encodeURIComponent(searchTerm.trim())}`);
       }
@@ -43,10 +38,7 @@ export const SearchBar = ({
   };
 
   return (
-    <form 
-      onSubmit={handleSearch} 
-      className={`relative ${isMobile ? 'w-full' : 'w-[400px]'} ${className}`}
-    >
+    <form onSubmit={handleSearch} className={`relative ${isMobile ? "w-full" : "w-[400px]"} ${className}`}>
       <div className="relative">
         <Input
           type="text"
@@ -55,12 +47,7 @@ export const SearchBar = ({
           onChange={(e) => setSearchTerm(e.target.value)}
           className="pr-14 h-10 bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 focus-visible:ring-primary"
         />
-        <Button 
-          type="submit" 
-          size="icon"
-          className="absolute right-0 top-0 rounded-l-none"
-          disabled={!searchTerm.trim()}
-        >
+        <Button type="submit" size="icon" className="absolute right-0 top-0 rounded-l-none" disabled={!searchTerm.trim()}>
           <Search className="h-4 w-4" />
         </Button>
       </div>
