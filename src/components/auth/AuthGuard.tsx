@@ -1,4 +1,4 @@
-
+import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSession } from '@/hooks/user/useSession';
 import { toast } from 'sonner';
@@ -12,9 +12,16 @@ export const AuthGuard = ({ children, fallback }: AuthGuardProps) => {
   const { session } = useSession();
   const navigate = useNavigate();
 
+  useEffect(() => {
+    // If no session and no fallback, then redirect immediately.
+    if (!session && !fallback) {
+      toast.error('Please sign in to continue');
+      navigate('/signin');
+    }
+  }, [session, fallback, navigate]);
+
   if (!session) {
-    toast.error('Please sign in to continue');
-    navigate('/signup');
+    // If a fallback is provided, render it.
     return fallback || null;
   }
 

@@ -19,41 +19,95 @@ import AdminSignIn from './pages/AdminSignIn';
 import SellerDashboard from './components/seller/SellerDashboard';
 import RetailShopDashboard from './pages/RetailShopDashboard';
 import EditListing from './components/seller/listing/EditListing';
+import { AuthGuard } from '@/components/auth/AuthGuard';
 
 function App() {
   return (
     <ToastProvider>
       <Router>
         <Routes>
+          {/* Public Routes */}
           <Route path="/" element={<Home />} />
           <Route path="/login" element={<SignIn />} />
           <Route path="/signup" element={<SignUp />} />
           <Route path="/kyc-verification" element={<KycVerification />} />
-          <Route path="/profile" element={<Profile />} />
-          <Route path="/admin/signin" element={<AdminSignIn />} />
-          <Route path="/admin/dashboard" element={<AdminDashboard />} />
-          {/* New Admin Routes */}
-          <Route path="/admin/dashboard/super" element={<AdminDashboard />} />
-          <Route path="/admin/dashboard/support" element={<SupportAdminDashboard />} />
-          <Route path="/admin/dashboard/dev" element={<DeveloperTasksTab />} />
-          <Route path="/migrate" element={<Migrate />} />
+
+          {/* Routes that are available publicly */}
           <Route path="/retail" element={<Retail />} />
           <Route path="/wholesale" element={<Wholesale />} />
           <Route path="/wholesale/shop-dashboard" element={<WholesaleShopDashboard />} />
 
-          {/*
-            Seller routes: SellerDashboard acts as a layout with nested routes.
-            Note that we include a nested route for editing a listing.
-          */}
-          <Route path="/retail/seller-dashboard/*" element={<SellerDashboard />}>
-            {/* 
-              In SellerDashboard, the nested components (tabs) are rendered.
-              Here we add the edit listing route.
-            */}
+          {/* Protected Routes: require sign-in */}
+          <Route
+            path="/profile"
+            element={
+                <Profile />
+            }
+          />
+          <Route
+            path="/admin/signin"
+            element={<AdminSignIn />}
+          />
+          <Route
+            path="/admin/dashboard"
+            element={
+              <AuthGuard>
+                <AdminDashboard />
+              </AuthGuard>
+            }
+          />
+          <Route
+            path="/admin/dashboard/super"
+            element={
+              <AuthGuard>
+                <AdminDashboard />
+              </AuthGuard>
+            }
+          />
+          <Route
+            path="/admin/dashboard/support"
+            element={
+              <AuthGuard>
+                <SupportAdminDashboard />
+              </AuthGuard>
+            }
+          />
+          <Route
+            path="/admin/dashboard/dev"
+            element={
+              <AuthGuard>
+                <DeveloperTasksTab />
+              </AuthGuard>
+            }
+          />
+          <Route
+            path="/migrate"
+            element={
+              <AuthGuard>
+                <Migrate />
+              </AuthGuard>
+            }
+          />
+
+          {/* Seller Routes */}
+          <Route path="/retail/seller-dashboard/*" 
+            element={
+              <AuthGuard>
+                <SellerDashboard />
+              </AuthGuard>
+            }
+          >
             <Route path="listings/edit/:id" element={<EditListing />} />
           </Route>
 
-          <Route path="/retail/shop-dashboard" element={<RetailShopDashboard />} />
+          <Route
+            path="/retail/shop-dashboard"
+            element={
+              <AuthGuard>
+                <RetailShopDashboard />
+              </AuthGuard>
+            }
+          />
         </Routes>
         <Toaster />
       </Router>
