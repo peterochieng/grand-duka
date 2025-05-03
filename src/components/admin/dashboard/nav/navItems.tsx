@@ -15,7 +15,9 @@ import {
   Lock,
   MessagesSquare,
   File,
-  Code2
+  Code2,
+  SquareCheckBig,
+  ClipboardCheck
 } from "lucide-react";
 import { AdminRole } from "@/lib/types/userTypes";
 
@@ -35,6 +37,8 @@ export const navItems: NavItem[] = [
   { icon: ShoppingBag, label: "Buyers", value: "buyers", allowedRoles: ["super-admin", "user-admin"] },
   { icon: BuildingStore, label: "Shops", value: "shops", allowedRoles: ["super-admin", "shop-admin"] },
   { icon: LayoutGrid, label: "Categories", value: "categories", allowedRoles: ["super-admin", "seller-admin", "shop-admin"] },
+  { icon: ClipboardCheck, label: "Subcategory Templates", value: "subcategory-templates", allowedRoles: ["super-admin"] },
+  { icon: SquareCheckBig, label: "Category Requests", value: "category-requests", allowedRoles: ["super-admin"] },
   { icon: File, label: "Templates", value: "templates", allowedRoles: ["super-admin"] },
   { icon: Settings, label: "Settings", value: "settings", allowedRoles: ["super-admin", "developer"] },
   { icon: BarChart3, label: "Analytics", value: "data-analytics", allowedRoles: ["super-admin", "support-admin"] },

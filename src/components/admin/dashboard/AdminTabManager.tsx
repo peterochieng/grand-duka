@@ -17,6 +17,9 @@ import { InspectionsTab } from './tabs/InspectionsTab';
 import { BuyersTab } from './tabs/BuyersTab';
 import { SupportAdminDashboard } from './tabs/SupportAdminDashboard';
 import { DeveloperTasksTab } from './tabs/dev/DeveloperTasksTab';
+import { AdminCategoryManager } from './tabs/categories/AdminCategoryManager';
+import { CategoryRequests } from './tabs/categories/CategoryRequests';
+import { AdminSubcategoryTemplateManager } from './tabs/templates/AdminSubcategoryTemplateManager';
 
 interface AdminTabContentProps {
   accessibleTabs: string[];
@@ -38,11 +41,21 @@ export const AdminTabContent = ({ accessibleTabs, currentRole }: AdminTabContent
         </TabsContent>
       )}
       
-      {accessibleTabs.includes('categories') && (
-        <TabsContent value="categories">
-          <CategoriesTab />
-        </TabsContent>
-      )}
+      {/* // Updated snippet in AdminTabManager.tsx */}
+{accessibleTabs.includes('categories') && (
+  <TabsContent value="categories">
+    <CategoriesTab />
+  </TabsContent>
+)}
+
+
+{accessibleTabs.includes('category-requests') && (
+  <TabsContent value="category-requests">
+    <CategoryRequests />
+  </TabsContent>
+)}
+
+{accessibleTabs.includes('subcategory-templates') && ( <TabsContent value="subcategory-templates"> <AdminSubcategoryTemplateManager /> </TabsContent> )}
       
       {accessibleTabs.includes('users') && (
         <TabsContent value="users">

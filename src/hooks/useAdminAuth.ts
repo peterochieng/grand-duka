@@ -44,6 +44,7 @@ export const useAdminAuth = () => {
         localStorage.setItem('adminAuthenticated', 'true');
         localStorage.setItem('adminRole', userRole);
         setIsAuthenticated(true);
+
         
         if (userRole === 'super-admin') {
           navigate('/admin/dashboard/super');

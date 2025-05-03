@@ -95,7 +95,6 @@ export const useAuthSubmit = ({
 
         addToast({ message: 'Signed in successfully', type: 'success' });
 
-        console.log(userRole);
 
         // Redirect based on role using navigate instead of window.location
         if (userRole === 'shop-owner' || userRole === 'shop-employee') {

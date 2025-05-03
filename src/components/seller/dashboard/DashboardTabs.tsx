@@ -9,8 +9,10 @@ import {
   MessageSquare,
   Truck,
   ClipboardList,
-  BarChart2
+  BarChart2,
+  LucideReceiptJapaneseYen
 } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 interface DashboardTabsProps {
   activeTab: string;
@@ -57,6 +59,7 @@ export const DashboardTabs = ({
         <Settings className="w-4 h-4 mr-2" />
         Settings
       </TabsTrigger>
+      
     </TabsList>
   );
 };

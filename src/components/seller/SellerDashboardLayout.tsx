@@ -1,9 +1,8 @@
-
 import React from 'react';
 import Layout from '@/components/Layout';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate, Outlet } from 'react-router-dom';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { 
@@ -12,11 +11,11 @@ import {
   ListFilter, 
   Settings, 
   MessageSquare, 
-  Truck 
+  Truck
 } from 'lucide-react';
 
 interface SellerDashboardLayoutProps {
-  children: React.ReactNode;
+  children?: React.ReactNode;
 }
 
 const SellerDashboardLayout = ({ children }: SellerDashboardLayoutProps) => {
@@ -92,9 +91,17 @@ const SellerDashboardLayout = ({ children }: SellerDashboardLayoutProps) => {
               <Settings className="w-4 h-4 mr-2" />
               Settings
             </TabsTrigger>
+            <TabsTrigger value="rejected" asChild>
+              <Link to="/retail/seller-dashboard/rejected">Rejected Listings</Link>
+            </TabsTrigger>
+            <TabsTrigger value="inventory" asChild>
+  <Link to="/retail/seller-dashboard/inventory">Inventory</Link>
+</TabsTrigger>
           </TabsList>
+          
 
-          {children}
+          {/* Render children (from SellerDashboard) if provided; otherwise, fallback to nested route Outlet */}
+          {children ? children : <Outlet />}
         </Tabs>
       </div>
     </Layout>

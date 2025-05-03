@@ -25,14 +25,8 @@ export const useSupportTickets = () => {
         setLoading(false);
       }
     };
-    
     loadTickets();
   }, []);
 
-  return { 
-    tickets, 
-    loading, 
-    error, 
-    filterTickets 
-  };
+  return { tickets, loading, error };
 };

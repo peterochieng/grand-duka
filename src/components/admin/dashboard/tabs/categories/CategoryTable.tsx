@@ -85,6 +85,8 @@ export const CategoryTable: React.FC<CategoryTableProps> = ({
     setLocalSearchTerm(e.target.value);
   };
 
+  console.log(filteredCategories, 'Filtered Categories');
+
   return (
     <div className="space-y-4">
       <CategoryTableHeader 
@@ -113,7 +115,7 @@ export const CategoryTable: React.FC<CategoryTableProps> = ({
             {filteredCategories.length === 0 ? (
               <CategoryEmptyState searchTerm={localSearchTerm} onAddCategory={onAddCategory} />
             ) : (
-              filteredCategories.map((category) => (
+              filteredCategories?.map((category) => (
                 <CategoryTableRow
                   key={category.id}
                   category={category}

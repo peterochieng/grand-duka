@@ -4,29 +4,18 @@ import { toast } from 'sonner';
 import { transformFeedbackToTickets } from './ticketTransformers';
 import { SupportTicket } from '@/hooks/support/types';
 
-export const fetchSupportTickets = async () => {
+export const fetchSupportTickets = async (): Promise<SupportTicket[]> => {
   try {
-    const { data: feedbackData, error: feedbackError } = await supabase
-      .from('feedback')
-      .select(`
-        id,
-        comment,
-        rating,
-        created_at,
-        buyer_id,
-        buyer_name,
-        seller_response,
-        seller_id,
-        product_id,
-        product_name
-      `)
+    const { data, error } = await supabase
+      .from('support_tickets')
+      .select('*')
       .order('created_at', { ascending: false });
-      
-    if (feedbackError) {
-      throw feedbackError;
+
+    if (error) {
+      throw error;
     }
-    
-    return transformFeedbackToTickets(feedbackData || []);
+
+    return transformFeedbackToTickets(data || []);
   } catch (err) {
     console.error('Error fetching support tickets:', err);
     throw err;

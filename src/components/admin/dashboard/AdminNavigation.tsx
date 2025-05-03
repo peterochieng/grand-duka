@@ -35,7 +35,7 @@ export const AdminNavigation = ({
       <div className="h-full overflow-auto">
         <div className={itemsContainerClassName}>
           {filteredItems.map((item) => {
-            const IconComponent = item.icon;
+            const IconComponent = item.icon as React.ComponentType<{ className: string }>;
             
             return (
               <NavButton

@@ -90,28 +90,179 @@ export const approveProduct = async (
   }
 };
 
+// const { data: { session } } = await supabase.auth.getSession();
+
+
+
 export const rejectProduct = async (
   productId: string,
-  adminId: string
+  adminId: string,
+  feedback: string
 ): Promise<boolean> => {
   try {
-    const { error } = await supabase
+    // Try to update and return the updated row using .select()
+    const { data, error } = await supabase
       .from('products')
       .update({
         approval_status: 'rejected',
+        approved_at: new Date().toISOString(),
         approved_by: adminId,
-        approved_at: new Date().toISOString()
+        rejection_reason: feedback, // Must match exactly your column name
       })
-      .eq('id', productId);
-    
+      .eq('id', productId)
+      .select();
+      
+    console.log('rejectProduct data:', data, 'error:', error);
+      
     if (error) {
-      console.error('Error rejecting product:', error);
       return false;
     }
-    
-    return true;
+    // Optionally check that data was returned and rejection_reason is updated:
+    if (data && data.length > 0 && data[0].rejection_reason === feedback) {
+      return true;
+    }
+    return false;
   } catch (e) {
     console.error('Exception in rejectProduct:', e);
+    return false;
+  }
+};
+
+export const getRejectedListings = async (sellerId: string): Promise<Product[]> => {
+  const { data, error } = await supabase
+    .from('products')
+    .select('*')
+    .eq('approval_status', 'rejected')
+    .eq('seller_id', sellerId);
+  if (error) {
+    console.error('Error fetching rejected listings:', error);
+    return [];
+  }
+  return data ? data.map(row => convertProductRowToProduct(row)) : [];
+};
+
+export const resubmitListing = async (productId: string): Promise<boolean> => {
+  const { data, error } = await supabase
+    .from('products')
+    .update({
+      approval_status: 'pending',
+      rejection_reason: null,  // Clear previous rejection feedback
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', productId)
+    .select();
+
+  if (error) {
+    console.error('Error resubmitting listing:', error);
+    return false;
+  }
+  if (!data || data.length === 0) {
+    console.error('No rows updated for product id:', productId);
+    return false;
+  }
+  // Optionally log the updated row(s)
+  console.log('Resubmitted listing data:', data);
+  return true;
+};
+
+export const challengeListing = async (productId: string, challengeComment: string): Promise<boolean> => {
+  const { data, error } = await supabase
+    .from('products')
+    .update({
+      approval_status: 'challenged',
+      challenge_reason: challengeComment,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', productId)
+    .select();
+  
+  if (error) {
+    console.error('Error challenging listing:', error);
+    return false;
+  }
+  if (!data || data.length === 0) {
+    console.error('No rows updated for challenge on product id:', productId);
+    return false;
+  }
+  console.log('Challenged listing data:', data);
+  return true;
+};
+
+export const getSellerListings = async (sellerId: string): Promise<Product[]> => {
+  const { data, error } = await supabase
+    .from('products')
+    .select('*')
+    .eq('seller_id', sellerId);
+  if (error) {
+    console.error('Error fetching seller listings:', error);
+    return [];
+  }
+  return data ? data.map((row) => convertProductRowToProduct(row)) : [];
+};
+
+export const togglePublishStatus = async (productId: string, publish: boolean): Promise<boolean> => {
+  const newStatus = publish ? 'published' : 'pending'; // Change to 'draft' if applicable
+  const { data, error } = await supabase
+    .from('products')
+    .update({
+      approval_status: newStatus,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', productId)
+    .select();
+  
+  if (error) {
+    console.error('Error updating publish status:', error);
+    return false;
+  }
+  if (!data || data.length === 0) {
+    console.error('No rows updated for product id:', productId);
+    return false;
+  }
+  return true;
+};
+
+export const updateListing = async (productId: string, updatedFields: Partial<Product>): Promise<boolean> => {
+  try {
+    const { data, error } = await supabase
+      .from('products')
+      .update({
+        ...updatedFields,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', productId)
+      .select();
+      
+    if (error) {
+      console.error('Error updating listing:', error);
+      return false;
+    }
+    if (!data || data.length === 0) {
+      console.error('No rows updated for product id:', productId);
+      return false;
+    }
+    console.log('Updated listing data:', data);
+    return true;
+  } catch (e) {
+    console.error('Exception in updateListing:', e);
+    return false;
+  }
+};
+
+export const deleteListing = async (productId: string): Promise<boolean> => {
+  try {
+    const { error } = await supabase
+      .from('products')
+      .delete()
+      .eq('id', productId);
+
+    if (error) {
+      console.error('Error deleting listing:', error);
+      return false;
+    }
+    return true;
+  } catch (e) {
+    console.error('Exception in deleteListing:', e);
     return false;
   }
 };

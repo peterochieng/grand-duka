@@ -12,6 +12,7 @@ import { SupportAdminStats } from './support/SupportAdminStats';
 import { SupportStats } from './support-admin/SupportStats';
 import { SupportFilters } from './support-admin/SupportFilters';
 import { SupportViewTabs } from './support-admin/SupportViewTabs';
+import { SupportBacklogTab } from '@/hooks/support/SupportBacklogTab';
 
 type SupportAdminTab = 'tickets' | 'product-approvals' | 'kyc-management';
 
@@ -124,6 +125,10 @@ export const SupportAdminDashboard = () => {
             KYC Management
           </Button>
         </div>
+
+        {activeTab === 'tickets' && <SupportBacklogTab />}
+      {activeTab === 'product-approvals' && <ProductApprovalManager />}
+      {activeTab === 'kyc-management' && <KycManagerTab />}
       </div>
       
       {isSuperAdmin && (

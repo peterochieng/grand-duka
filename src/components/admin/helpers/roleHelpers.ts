@@ -11,6 +11,8 @@ export const getRoleTabs = (role: AdminRole | null): string[] => {
         'dashboard',
         'products',
         'categories',
+        'category-requests',
+        'subcategory-templates',
         'users',
         'sellers',
         'shops',

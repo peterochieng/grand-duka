@@ -1,16 +1,25 @@
-
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { SubcategoryRow } from "@/lib/types/supabaseTypes";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { toast } from "sonner";
 
 interface SubcategoryFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSubmit: (subcategory: Omit<SubcategoryRow, "id" | "created_at" | "updated_at">) => Promise<SubcategoryRow | null>;
+  onSubmit: (
+    subcategory: Omit<SubcategoryRow, "id" | "created_at" | "updated_at">
+  ) => Promise<SubcategoryRow | null>;
   subcategory: SubcategoryRow | null;
   categoryId: string;
   isEdit: boolean;
@@ -22,96 +31,123 @@ export const SubcategoryForm: React.FC<SubcategoryFormProps> = ({
   onSubmit,
   subcategory,
   categoryId,
-  isEdit
+  isEdit,
 }) => {
   const [formData, setFormData] = useState<Partial<SubcategoryRow>>({
-    name: '',
+    name: "",
     category_id: categoryId,
-    is_published: true
+    is_published: true,
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    if (subcategory) {
+    if (subcategory && isEdit) {
       setFormData({
-        name: subcategory.name || '',
+        name: subcategory.name || "",
         category_id: subcategory.category_id || categoryId,
-        is_published: subcategory.is_published !== false
+        is_published: subcategory.is_published !== false,
       });
     } else {
       setFormData({
-        name: '',
+        name: "",
         category_id: categoryId,
-        is_published: true
+        is_published: true,
       });
     }
-  }, [subcategory, categoryId, open]);
+  }, [subcategory, categoryId, open, isEdit]);
 
-  const handleChange = (field: keyof SubcategoryRow, value: any) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+  const handleChange = (
+    field: keyof SubcategoryRow,
+    value: any
+  ) => {
+    setFormData((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
   };
 
   const handleSubmit = async () => {
-    if (!formData.name?.trim()) return;
-    
+    // Validate that name is provided
+    if (!formData.name?.trim()) {
+      toast.error("Subcategory name is required");
+      return;
+    }
     setIsSubmitting(true);
     try {
-      const subcategoryData = {
-        name: formData.name,
+      const subcategoryData: Omit<
+        SubcategoryRow,
+        "id" | "created_at" | "updated_at"
+      > = {
+        name: formData.name || "",
         category_id: formData.category_id || categoryId,
-        is_published: formData.is_published
-      } as Omit<SubcategoryRow, "id" | "created_at" | "updated_at">;
-      
+        is_published: formData.is_published !== false,
+      };
       const result = await onSubmit(subcategoryData);
       if (result) {
+        toast.success(
+          isEdit
+            ? "Subcategory updated successfully"
+            : "Subcategory created successfully"
+        );
         onOpenChange(false);
+      } else {
+        toast.error(
+          isEdit
+            ? "Failed to update subcategory"
+            : "Failed to create subcategory"
+        );
       }
     } catch (error) {
-      console.error('Error submitting subcategory:', error);
-    } finally {
-      setIsSubmitting(false);
+      console.error("Error submitting subcategory:", error);
+      toast.error("Error submitting subcategory");
     }
+    setIsSubmitting(false);
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{isEdit ? 'Edit Subcategory' : 'Create New Subcategory'}</DialogTitle>
+          <DialogTitle>
+            {isEdit ? "Edit Subcategory" : "Add New Subcategory"}
+          </DialogTitle>
           <DialogDescription>
-            {isEdit ? 'Update the subcategory details below.' : 'Enter the details for your new subcategory.'}
+            {isEdit
+              ? "Update the details of your subcategory."
+              : "Enter the details for your new subcategory."}
           </DialogDescription>
         </DialogHeader>
-        <div className="space-y-4 py-4">
-          <div className="space-y-2">
-            <Label htmlFor="name">Subcategory Name *</Label>
+        <div className="space-y-4">
+          <div>
+            <Label htmlFor="subcategory-name">Subcategory Name *</Label>
             <Input
-              id="name"
+              id="subcategory-name"
               value={formData.name || ""}
-              onChange={(e) => handleChange('name', e.target.value)}
-              placeholder="e.g. Premium Electronics, New Arrivals"
+              onChange={(e) =>
+                handleChange("name", e.target.value)
+              }
+              placeholder="Enter subcategory name"
             />
           </div>
-          
           <div className="flex items-center space-x-2">
-            <Switch 
-              id="is_published"
-              checked={formData.is_published !== false}
-              onCheckedChange={(checked) => handleChange('is_published', checked)}
+            <Label htmlFor="is-published">Published</Label>
+            <Switch
+              id="is-published"
+              checked={formData.is_published === true}
+              onCheckedChange={(checked) =>
+                handleChange("is_published", checked)
+              }
             />
-            <Label htmlFor="is_published">Publish subcategory immediately</Label>
           </div>
-          
-          <DialogFooter>
-            <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>
-              Cancel
-            </Button>
-            <Button onClick={handleSubmit} disabled={isSubmitting || !formData.name?.trim()}>
-              {isSubmitting ? 'Saving...' : isEdit ? 'Save Changes' : 'Create Subcategory'}
-            </Button>
-          </DialogFooter>
         </div>
+        <DialogFooter>
+          <Button onClick={handleSubmit} disabled={isSubmitting}>
+            {isEdit ? "Update Subcategory" : "Create Subcategory"}
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
 };
+
+export default SubcategoryForm;
