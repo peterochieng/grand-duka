@@ -5,6 +5,7 @@ import { TemplateManager } from "./templates/TemplateManager";
 import { SubcategoryTemplates } from "./templates/SubcategoryTemplates";
 import { CategoryRequests } from "./templates/CategoryRequests";
 import { File, MessageSquare, Grid3X3 } from "lucide-react";
+import { AdminSubcategoryTemplateManager } from "./AdminSubcategoryTemplateManager";
 
 export const TemplateTab = () => {
   const [activeTab, setActiveTab] = useState("templates");
@@ -44,6 +45,10 @@ export const TemplateTab = () => {
 
         <TabsContent value="category-requests">
           <CategoryRequests />
+        </TabsContent>
+
+        <TabsContent value="subcategory-requests">
+          <AdminSubcategoryTemplateManager />
         </TabsContent>
       </Tabs>
     </div>

@@ -65,14 +65,14 @@ export const useAuthSubmit = ({
 
         // Fetch the latest user role
         const { data: rpcData, error: rpcError } = await supabase
-          .rpc('get_latest_user_role', { p_user: data.user.id });
+          .rpc('get_latest_user_role' as any, { p_user: data.user.id });
 
         if (rpcError) {
           console.error('RPC error fetching latest role:', rpcError);
         }
 
         const latestRole = rpcData?.[0]?.role;
-
+        console.log('Latest role from RPC:', latestRole);
         const userRole =
           latestRole ||
           data.user.app_metadata?.role ||

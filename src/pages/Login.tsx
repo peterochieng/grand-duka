@@ -171,6 +171,7 @@ const Login = () => {
               Sign up
             </Link>
           </p>
+          
         </motion.div>
       </main>
       <Footer />

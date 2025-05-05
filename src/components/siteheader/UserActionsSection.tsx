@@ -1,12 +1,13 @@
 
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
-import { LogIn, UserCircle, Heart, LogOut } from "lucide-react";
+import { LogIn, UserCircle, Heart, LogOut, Lock } from "lucide-react";
 import { NotificationsPopover } from '../notifications/NotificationsPopover';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { set } from 'date-fns';
 
 interface UserActionsSectionProps {
   isLoggedIn: boolean;
@@ -15,12 +16,15 @@ interface UserActionsSectionProps {
 
 export const UserActionsSection = ({ isLoggedIn, userId }: UserActionsSectionProps) => {
   const { user } = useCurrentUser();
+  const navigate = useNavigate();
   
   const handleSignOut = async () => {
     try {
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
       toast.success("Signed out successfully");
+      setTimeout(() => {
+        navigate('/signin');}, 1000); // Redirect after 1 second
     } catch (error) {
       console.error("Error signing out:", error);
       toast.error("Failed to sign out");
@@ -70,6 +74,12 @@ export const UserActionsSection = ({ isLoggedIn, userId }: UserActionsSectionPro
             <Link to="/signup">
               <UserCircle className="mr-2 h-4 w-4" />
               Sign up
+            </Link>
+          </Button>
+          <Button size="sm" asChild>
+            <Link to="/admin/signin">
+              <Lock className="mr-2 h-4 w-4" />
+              Admin
             </Link>
           </Button>
         </>

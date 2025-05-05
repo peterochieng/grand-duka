@@ -15,7 +15,6 @@ import { useActiveTemplates } from '@/hooks/auth/useActiveTemplates';
 import { supabase } from '@/integrations/supabase/client';
 import { Product, Template } from '@/lib/types';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
-import { updateListing } from '@/services/productApprovalService';
 
 interface CreateListingProps {
   existingProduct?: Product;
@@ -30,10 +29,10 @@ const CreateListing = ({ existingProduct, isRelisting }: CreateListingProps) => 
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | undefined>(undefined);
   const [selectedSubcategoryId, setSelectedSubcategoryId] = useState<string | undefined>(undefined);
 
-  // Fetch categories for the seller (only published ones)
+  // Fetch categories (only published ones)
   const { categories, loading: categoriesLoading } = useCategories();
 
-  // Pass selectedCategoryId to fetch subcategories of that category
+  // Fetch subcategories based on selected category
   const { subcategories, loading: subcategoriesLoading } = useSubcategories(selectedCategoryId);
 
   // Template & product selection states
@@ -44,7 +43,18 @@ const CreateListing = ({ existingProduct, isRelisting }: CreateListingProps) => 
   const [showImportModal, setShowImportModal] = useState<boolean>(false);
   const [showTemplateManager, setShowTemplateManager] = useState<boolean>(false);
 
-  // Dummy local state for listing options – adjust these as needed
+  // Basic info state from BasicInformationForm – initialize with empty values
+  const [basicInfo, setBasicInfo] = useState({
+    title: '',
+    description: '',
+    price: '',
+    condition: 'new',
+    location: '',
+    currency: 'USD',
+    subcategory: ''
+  });
+
+  // Dummy state for listing options
   const [listingType, setListingType] = useState<string>('fixed');
   const [auctionEnabled, setAuctionEnabled] = useState<boolean>(false);
   const [startingBid, setStartingBid] = useState<number>(0);
@@ -57,9 +67,10 @@ const CreateListing = ({ existingProduct, isRelisting }: CreateListingProps) => 
 
   const navigate = useNavigate();
 
-  // Handle template selection from Template Manager
+  // Handle template selection from Template Manager pop-up
   const handleTemplateSelect = (template: Template) => {
     setSelectedTemplate(template);
+    setSelectedTemplateId(template.id);
     setShowTemplateManager(false);
   };
 
@@ -77,6 +88,19 @@ const CreateListing = ({ existingProduct, isRelisting }: CreateListingProps) => 
     setShowImportModal(false);
   };
 
+  // Handler to get basic info changes from BasicInformationForm
+  const handleBasicInfoChange = (info: {
+    title: string;
+    description: string;
+    price: string;
+    condition: string;
+    location: string;
+    currency: string;
+    subcategory: string;
+  }) => {
+    setBasicInfo(info);
+  };
+
   // Submit handler – builds new listing with allowed columns
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -86,51 +110,36 @@ const CreateListing = ({ existingProduct, isRelisting }: CreateListingProps) => 
       return;
     }
 
-    // Build the listing payload using state values
-    const listingPayload = {
-      title: selectedProduct?.title || "Untitled Listing",
-      description: selectedProduct?.description || "",
-      price: selectedProduct?.price || 0,
-      currency: selectedProduct?.currency || "USD",
+    const newListing = {
+      title: basicInfo.title,
+      description: basicInfo.description,
+      price: Number(basicInfo.price),
+      currency: basicInfo.currency,
       seller_id: user.id,
-      condition: selectedProduct?.condition || "new",
-      location: selectedProduct?.location || "",
+      condition: basicInfo.condition,
+      location: basicInfo.location,
+      // Category and subcategory come from the outer selectors.
       category: selectedCategoryId || "",
-      subcategory: selectedSubcategoryId || "",
+      subcategory: selectedSubcategoryId || basicInfo.subcategory || "",
       tags: selectedProduct?.tags || [],
       shipping: selectedProduct?.shipping || 0,
       featured: selectedProduct?.featured || false,
-      // For new listings, set to "pending"; for updates, you might retain the current status or change as appropriate
-      approval_status: existingProduct ? selectedProduct?.approval_status : "pending",
-      // Use current timestamps
-      updated_at: new Date().toISOString(),
-      // For new listing creation: also set created_at
-      ...(existingProduct ? {} : { created_at: new Date().toISOString() }),
+      approval_status: "pending",
+      created_at: new Date(),
+      updated_at: new Date()
     };
 
-    if (existingProduct) {
-      // Edit mode: update the existing listing
-      const success = await updateListing(existingProduct.id, listingPayload);
-      if (success) {
-        toast.success('Listing updated successfully!');
-        navigate('/my-listings');
-      } else {
-        toast.error('Failed to update listing');
-      }
-    } else {
-      // Create mode: Insert a new listing
-      const { data, error } = await supabase
-        .from('products')
-        .insert([listingPayload]);
+    const { data, error } = await supabase
+      .from('products')
+      .insert([newListing]);
 
-      if (error) {
-        console.error('Error inserting listing:', error);
-        toast.error('Failed to create listing');
-      } else {
-        toast.success('Listing created successfully!');
-        console.log('New listing created:', data);
-        navigate('/my-listings');
-      }
+    if (error) {
+      console.error('Error inserting listing:', error);
+      toast.error('Failed to create listing');
+    } else {
+      toast.success('Listing created successfully!');
+      console.log('New listing created:', data);
+      navigate('/retail/seller-dashboard/inventory');
     }
   };
 
@@ -158,8 +167,10 @@ const CreateListing = ({ existingProduct, isRelisting }: CreateListingProps) => 
               onChange={(e) => {
                 const catId = e.target.value || undefined;
                 setSelectedCategoryId(catId);
-                // Reset subcategory when category changes
+                // Reset subcategory and template when category changes
                 setSelectedSubcategoryId(undefined);
+                setSelectedTemplate(null);
+                setSelectedTemplateId(null);
               }}
               className="border rounded p-2 w-full"
             >
@@ -181,7 +192,12 @@ const CreateListing = ({ existingProduct, isRelisting }: CreateListingProps) => 
           ) : (
             <select
               value={selectedSubcategoryId || ''}
-              onChange={(e) => setSelectedSubcategoryId(e.target.value || undefined)}
+              onChange={(e) => {
+                setSelectedSubcategoryId(e.target.value || undefined);
+                // Reset template selection when subcategory changes
+                setSelectedTemplate(null);
+                setSelectedTemplateId(null);
+              }}
               className="border rounded p-2 w-full"
             >
               <option value="">-- Select a subcategory --</option>
@@ -194,13 +210,13 @@ const CreateListing = ({ existingProduct, isRelisting }: CreateListingProps) => 
           )}
         </div>
 
-        {/* Template Selection – only shown once a subcategory is selected */}
+        {/* Template Selection */}
         {selectedSubcategoryId && (
           <div className="mb-4">
             <label className="block text-sm font-medium mb-1">Select Template</label>
             {templatesLoading ? (
               <div className="h-10 bg-gray-200 animate-pulse rounded" />
-            ) : (
+            ) : activeTemplates.length > 0 ? (
               <select
                 value={selectedTemplateId || ''}
                 onChange={(e) => {
@@ -218,14 +234,32 @@ const CreateListing = ({ existingProduct, isRelisting }: CreateListingProps) => 
                   </option>
                 ))}
               </select>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                No active templates available for this subcategory.
+              </p>
             )}
           </div>
         )}
 
-        {selectedTemplate && <ListingTemplateBanner template={selectedTemplate} />}
+        {/* If a template is selected, display its banner */}
+        {selectedTemplate && (
+          <div className="mb-4">
+            <ListingTemplateBanner template={selectedTemplate} />
+          </div>
+        )}
 
-        {/* Other existing listing form components */}
-        <BasicInformationForm selectedProduct={selectedProduct} />
+        {/* Pass the outer selected category (as its name) into BasicInformationForm */}
+        <BasicInformationForm 
+          selectedProduct={selectedProduct} 
+          presetCategory={
+            selectedCategoryId 
+              ? categories.find((cat: any) => cat.id === selectedCategoryId)?.name || ''
+              : ''
+          }
+          onBasicInfoChange={handleBasicInfoChange}
+        />
+
         <ListingOptionsForm 
           listingType={listingType}
           setListingType={setListingType}
@@ -248,7 +282,7 @@ const CreateListing = ({ existingProduct, isRelisting }: CreateListingProps) => 
             Save as Draft
           </Button>
           <Button type="submit">
-            {existingProduct ? 'Update Listing' : (isRelisting ? 'Relist Item' : 'Create Listing')}
+            {isRelisting ? 'Relist Item' : 'Create Listing'}
           </Button>
         </div>
       </form>

@@ -46,7 +46,7 @@ export const ProfileHeader = ({
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
       toast.success("You've been signed out successfully");
-      navigate('/login');
+      navigate('/signin');
     } catch (error) {
       console.error("Error signing out:", error);
       toast.error("Failed to sign out. Please try again.");

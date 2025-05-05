@@ -1,27 +1,37 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Product } from "@/lib/types";
 import { categories } from "@/lib/categories";
-import { useToast } from "@/hooks/use-toast";
 import CategoryFieldsMapper from './category-fields/CategoryFieldsMapper';
 
 interface BasicInformationFormProps {
   selectedProduct: Product | null;
+  presetCategory?: string;
+  onBasicInfoChange?: (info: {
+    title: string;
+    description: string;
+    price: string;
+    condition: string;
+    location: string;
+    currency: string;
+    subcategory: string;
+  }) => void;
 }
 
 const BasicInformationForm: React.FC<BasicInformationFormProps> = ({ 
-  selectedProduct
+  selectedProduct, 
+  presetCategory,
+  onBasicInfoChange
 }) => {
-  const { toast } = useToast();
   const [title, setTitle] = useState(selectedProduct?.title || '');
   const [description, setDescription] = useState(selectedProduct?.description || '');
   const [price, setPrice] = useState(selectedProduct?.price?.toString() || '');
   const [condition, setCondition] = useState(selectedProduct?.condition || 'New');
-  const [category, setCategory] = useState(selectedProduct?.category || '');
+  // Use presetCategory if provided; otherwise, default from selectedProduct or empty string.
+  const [category, setCategory] = useState(selectedProduct?.category || presetCategory || '');
   const [subcategory, setSubcategory] = useState(selectedProduct?.subcategory || '');
   const [location, setLocation] = useState(selectedProduct?.location || 'Dubai, UAE');
   const [currency, setCurrency] = useState(selectedProduct?.currency || 'AED');
@@ -31,6 +41,13 @@ const BasicInformationForm: React.FC<BasicInformationFormProps> = ({
     const selectedCategoryObj = categories.find(c => c.name === category);
     return selectedCategoryObj?.subcategories || [];
   };
+
+  // Whenever basic info fields change, notify parent
+  useEffect(() => {
+    if (onBasicInfoChange) {
+      onBasicInfoChange({ title, description, price, condition, location, currency, subcategory });
+    }
+  }, [title, description, price, condition, location, currency, subcategory, onBasicInfoChange]);
 
   return (
     <div className="space-y-6">
@@ -48,27 +65,37 @@ const BasicInformationForm: React.FC<BasicInformationFormProps> = ({
           />
         </div>
         
-        <div>
-          <Label htmlFor="category">Category</Label>
-          <Select 
-            value={category} 
-            onValueChange={(value) => {
-              setCategory(value);
-              setSubcategory(''); // Reset subcategory when category changes
-            }}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select a category" />
-            </SelectTrigger>
-            <SelectContent>
-              {categories.map((cat) => (
-                <SelectItem key={cat.id} value={cat.name}>
-                  {cat.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+        {/* Render category selector only if a presetCategory is not provided */}
+        {!presetCategory && (
+          <div>
+            <Label htmlFor="category">Category</Label>
+            <Select 
+              value={category} 
+              onValueChange={(value) => {
+                setCategory(value);
+                setSubcategory(''); // Reset subcategory when category changes
+              }}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select a category" />
+              </SelectTrigger>
+              <SelectContent>
+                {categories.map((cat) => (
+                  <SelectItem key={cat.id} value={cat.name}>
+                    {cat.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+
+        {(presetCategory && category) && (
+          <div>
+            <Label>Category</Label>
+            <p className="py-2 px-3 border rounded bg-gray-100">{category}</p>
+          </div>
+        )}
         
         {getAvailableSubcategories().length > 0 && (
           <div>

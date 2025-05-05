@@ -105,7 +105,7 @@ export const fetchAllProducts = async (): Promise<Product[]> => {
     console.error('Error fetching all products:', error);
     throw error;
   }
-  return data || [];
+  return data as any || [];
 };
 
 // Use this function in your search query to filter products.

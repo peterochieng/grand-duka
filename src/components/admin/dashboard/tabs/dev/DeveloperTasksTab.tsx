@@ -1,5 +1,4 @@
-
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,6 +7,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertTriangle, CheckCircle2, Clock, Code2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import Layout from '@/components/Layout';
+import { Footer } from '@/components/Footer';
 
 interface Task {
   id: string;
@@ -64,92 +65,97 @@ export const DeveloperTasksTab = () => {
   };
 
   return (
-    <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Code2 className="h-5 w-5" />
-            Developer Tasks
-          </CardTitle>
-          <CardDescription>
-            Manage and track development tasks for escalated issues
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="task-title">Task Title</Label>
-              <Input
-                id="task-title"
-                value={newTask.title}
-                onChange={(e) => setNewTask({ ...newTask, title: e.target.value })}
-                placeholder="Enter task title"
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="task-description">Description</Label>
-              <Textarea
-                id="task-description"
-                value={newTask.description}
-                onChange={(e) => setNewTask({ ...newTask, description: e.target.value })}
-                placeholder="Enter task description"
-                rows={3}
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="task-priority">Priority</Label>
-              <Select
-                value={newTask.priority}
-                onValueChange={(value: Task['priority']) => 
-                  setNewTask({ ...newTask, priority: value })
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select priority" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="low">Low</SelectItem>
-                  <SelectItem value="medium">Medium</SelectItem>
-                  <SelectItem value="high">High</SelectItem>
-                  <SelectItem value="critical">Critical</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            
-            <Button onClick={handleAddTask} className="w-full">
-              Add Task
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      <div className="space-y-4">
-        {tasks.map((task) => (
-          <Card key={task.id}>
-            <CardHeader className="pb-2">
-              <div className="flex items-start justify-between">
-                <div className="space-y-1">
-                  <CardTitle className="flex items-center gap-2">
-                    {getStatusIcon(task.status)}
-                    {task.title}
-                  </CardTitle>
-                  <CardDescription>
-                    Created on {new Date(task.createdAt).toLocaleDateString()}
-                  </CardDescription>
-                </div>
-                <Badge className={`${getPriorityColor(task.priority)}`}>
-                  {task.priority}
-                </Badge>
-              </div>
+    <Layout>
+      <div className="container mx-auto py-10">
+        <h1 className="text-3xl font-bold text-center mb-6">Developer Tasks Dashboard</h1>
+        <div className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Code2 className="h-5 w-5" />
+                Developer Tasks
+              </CardTitle>
+              <CardDescription>
+                Manage and track development tasks for escalated issues.
+              </CardDescription>
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-muted-foreground">{task.description}</p>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="task-title">Task Title</Label>
+                  <Input
+                    id="task-title"
+                    value={newTask.title}
+                    onChange={(e) => setNewTask({ ...newTask, title: e.target.value })}
+                    placeholder="Enter task title"
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="task-description">Description</Label>
+                  <Textarea
+                    id="task-description"
+                    value={newTask.description}
+                    onChange={(e) => setNewTask({ ...newTask, description: e.target.value })}
+                    placeholder="Enter task description"
+                    rows={3}
+                  />
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="task-priority">Priority</Label>
+                  <Select
+                    value={newTask.priority}
+                    onValueChange={(value: Task['priority']) =>
+                      setNewTask({ ...newTask, priority: value })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select priority" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="low">Low</SelectItem>
+                      <SelectItem value="medium">Medium</SelectItem>
+                      <SelectItem value="high">High</SelectItem>
+                      <SelectItem value="critical">Critical</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <Button onClick={handleAddTask} className="w-full">
+                  Add Task
+                </Button>
+              </div>
             </CardContent>
           </Card>
-        ))}
+
+          <div className="space-y-4">
+            {tasks.map((task) => (
+              <Card key={task.id}>
+                <CardHeader className="pb-2">
+                  <div className="flex items-start justify-between">
+                    <div className="space-y-1">
+                      <CardTitle className="flex items-center gap-2">
+                        {getStatusIcon(task.status)}
+                        {task.title}
+                      </CardTitle>
+                      <CardDescription>
+                        Created on {new Date(task.createdAt).toLocaleDateString()}
+                      </CardDescription>
+                    </div>
+                    <Badge className={`${getPriorityColor(task.priority)}`}>
+                      {task.priority}
+                    </Badge>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-muted-foreground">{task.description}</p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
       </div>
-    </div>
+    </Layout>
   );
 };

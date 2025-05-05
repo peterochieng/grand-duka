@@ -85,6 +85,12 @@ export const SignInForm = ({ loginType, isLoading, setIsLoading }: SignInFormPro
                     Sign up
                   </Link>
                 </p>
+                <p className="mt-6 text-center text-sm text-muted-foreground">
+            An Admin ?{' '}
+            <Link to="/admin/signin" className="text-primary hover:underline">
+              Sign in here
+            </Link>
+          </p>
     </form>
   );
 };

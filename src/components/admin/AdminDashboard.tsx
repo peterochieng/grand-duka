@@ -8,16 +8,15 @@ import { AdminNavigation } from "./dashboard/AdminNavigation";
 import { AdminTabContent } from "./dashboard/AdminTabManager";
 import { useRoleUtils } from "./dashboard/hooks/useRoleUtils";
 import { getRoleTabs } from "./helpers/roleHelpers";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 interface AdminDashboardProps {
-  currentRole: AdminRole | null;
+  currentRole: AdminRole;
   onLogout: () => void;
 }
 
-export const AdminDashboard = ({
-  currentRole,
-  onLogout,
-}: AdminDashboardProps) => {
+const AdminDashboard = ({ currentRole }: AdminDashboardProps) => {
   const navigate = useNavigate();
   const [isAdmin, setIsAdmin] = useState(false);
   const { getRoleIcon, getRoleTitle } = useRoleUtils(currentRole);
@@ -26,7 +25,6 @@ export const AdminDashboard = ({
 
   // Determine accessible tabs based on role
   const accessibleTabs = getRoleTabs(currentRole);
-  // Set default tab – for super-admin, show categories by default; for support-admin, default to 'support'; otherwise use the first tab or 'dashboard'
   const defaultTab =
     currentRole === "super-admin"
       ? "categories"
@@ -49,10 +47,19 @@ export const AdminDashboard = ({
     setIsAdmin(true);
   }, [navigate]);
 
-  const handleTabChange = (tab: string) => {
-    console.log("Clicked tab:", tab);
-    console.log(activeTab);
-    setActiveTab(tab);
+  // Implement the logout function here
+  const handleLogout = async () => {
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+      localStorage.removeItem("adminAuthenticated");
+      localStorage.removeItem("adminRole");
+      toast.success("Logged out successfully");
+      navigate("/admin/signin");
+    } catch (error) {
+      console.error("Error logging out:", error);
+      toast.error("Logout failed");
+    }
   };
 
   if (!isAdmin) {
@@ -67,19 +74,19 @@ export const AdminDashboard = ({
           <h1 className="text-2xl font-bold">GrandDuka Admin</h1>
           <button
             className="text-sm text-red-500 hover:text-red-700"
-            onClick={onLogout}
+            onClick={handleLogout}
           >
             Logout
           </button>
         </div>
       </header>
 
-      {/* Admin Header Bar (existing navigation header) */}
+      {/* Admin Header Bar */}
       <AdminHeaderBar
         currentRole={currentRole}
         getRoleIcon={getRoleIcon}
         getRoleTitle={getRoleTitle}
-        onLogout={onLogout}
+        onLogout={handleLogout}
       />
 
       {/* Main Content Section */}
@@ -89,10 +96,7 @@ export const AdminDashboard = ({
           <p className="text-sm text-muted-foreground">
             {currentRole === "super-admin"
               ? "Manage all aspects of your GrandDuka marketplace"
-              : `Manage ${currentRole?.replace(
-                  "-",
-                  " "
-                )} functions of your GrandDuka marketplace`}
+              : `Manage ${currentRole?.replace("-", " ")} functions of your GrandDuka marketplace`}
           </p>
         </div>
 

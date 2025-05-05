@@ -16,7 +16,7 @@ export const AuthGuard = ({ children, fallback }: AuthGuardProps) => {
     // If no session and no fallback, then redirect immediately.
     if (!session && !fallback) {
       toast.error('Please sign in to continue');
-      navigate('/signin');
+      navigate('/signup');
     }
   }, [session, fallback, navigate]);
 

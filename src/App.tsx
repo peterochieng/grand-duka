@@ -30,7 +30,7 @@ function App() {
         <Routes>
           {/* Public Routes */}
           <Route path="/" element={<Home />} />
-          <Route path="/login" element={<SignIn />} />
+          <Route path="/signin" element={<SignIn />} />
           <Route path="/signup" element={<SignUp />} />
           <Route path="/kyc-verification" element={<KycVerification />} />
           <Route path="/product/:id" element={<ProductDetail />} />
@@ -62,33 +62,25 @@ function App() {
           <Route
             path="/admin/dashboard/super"
             element={
-              <AuthGuard>
                 <AdminDashboard />
-              </AuthGuard>
             }
           />
           <Route
             path="/admin/dashboard/support"
             element={
-              <AuthGuard>
                 <SupportAdminDashboard />
-              </AuthGuard>
             }
           />
           <Route
             path="/admin/dashboard/dev"
             element={
-              <AuthGuard>
                 <DeveloperTasksTab />
-              </AuthGuard>
             }
           />
           <Route
             path="/migrate"
             element={
-              <AuthGuard>
                 <Migrate />
-              </AuthGuard>
             }
           />
 
@@ -98,9 +90,7 @@ function App() {
           {/* Seller Routes */}
           <Route path="/retail/seller-dashboard/*" 
             element={
-              <AuthGuard>
                 <SellerDashboard />
-              </AuthGuard>
             }
           >
             <Route path="listings/edit/:id" element={<EditListing />} />
@@ -109,9 +99,7 @@ function App() {
           <Route
             path="/retail/shop-dashboard"
             element={
-              <AuthGuard>
                 <RetailShopDashboard />
-              </AuthGuard>
             }
           />
         </Routes>

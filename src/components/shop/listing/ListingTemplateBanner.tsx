@@ -6,6 +6,7 @@ import { Template } from "@/lib/types";
 
 interface ListingTemplateBannerProps {
   template: Template;
+  subcategoryId?:any;
 }
 
 const ListingTemplateBanner: React.FC<ListingTemplateBannerProps> = ({ template }) => {

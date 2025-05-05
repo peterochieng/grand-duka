@@ -12,6 +12,7 @@ export const getRoleTabs = (role: AdminRole | null): string[] => {
         'products',
         'categories',
         'category-requests',
+        'subcategory-requests',
         'subcategory-templates',
         'users',
         'sellers',
