@@ -1,4 +1,3 @@
-
 import { cn } from "@/lib/utils";
 import { AdminRole } from "@/lib/types/userTypes";
 import { NavButton } from "./nav/NavButton";
@@ -23,33 +22,30 @@ export const AdminNavigation = ({
     currentRole && item.allowedRoles.includes(currentRole as AdminRole)
   );
 
-  // Safe className handling with explicit type assertions
-  const containerClassName = cn("h-full", className || "");
+  // Update the container to use a horizontal layout.
+  const containerClassName = cn("w-full", className || "");
   const itemsContainerClassName = cn(
-    "flex flex-col gap-2 p-2",
-    collapsed ? "items-center" : ""
+    "flex items-center gap-4 p-2 overflow-x-auto", // changed from flex-col to flex-row with horizontal scrolling if needed
   );
 
   return (
     <div className={containerClassName}>
-      <div className="h-full overflow-auto">
-        <div className={itemsContainerClassName}>
-          {filteredItems.map((item) => {
-            const IconComponent = item.icon as React.ComponentType<{ className: string }>;
-            
-            return (
-              <NavButton
-                key={item.value}
-                icon={<IconComponent className="h-5 w-5" />}
-                label={item.label}
-                active={activeTab === item.value}
-                onClick={() => onTabChange(item.value)}
-                collapsed={collapsed}
-                className={typeof item.className === 'string' ? item.className : ""}
-              />
-            );
-          })}
-        </div>
+      <div className={itemsContainerClassName}>
+        {filteredItems.map((item) => {
+          const IconComponent = item.icon as React.ComponentType<{ className: string }>;
+          
+          return (
+            <NavButton
+              key={item.value}
+              icon={<IconComponent className="h-5 w-5" />}
+              label={item.label}
+              active={activeTab === item.value}
+              onClick={() => onTabChange(item.value)}
+              collapsed={collapsed}
+              className={typeof item.className === 'string' ? item.className : ""}
+            />
+          );
+        })}
       </div>
     </div>
   );

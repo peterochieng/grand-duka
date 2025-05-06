@@ -100,7 +100,7 @@ const AdminDashboard = ({ currentRole }: AdminDashboardProps) => {
           </p>
         </div>
 
-        <AdminStats currentRole={currentRole} />
+        {/* <AdminStats currentRole={currentRole} /> */}
 
         <div className="mt-4">
           <Tabs value={activeTab} onValueChange={(val) => setActiveTab(val)}>
