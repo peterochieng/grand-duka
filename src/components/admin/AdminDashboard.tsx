@@ -72,12 +72,12 @@ const AdminDashboard = ({ currentRole }: AdminDashboardProps) => {
       <header className="bg-white shadow py-4">
         <div className="max-w-7xl mx-auto px-4 flex items-center justify-between">
           <h1 className="text-2xl font-bold">GrandDuka Admin</h1>
-          <button
+          {/* <button
             className="text-sm text-red-500 hover:text-red-700"
             onClick={handleLogout}
           >
             Logout
-          </button>
+          </button> */}
         </div>
       </header>
 

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { toast } from 'sonner';
+import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import ListingHeader from '@/components/shop/listing/ListingHeader';
@@ -24,6 +24,8 @@ interface CreateListingProps {
 const CreateListing = ({ existingProduct, isRelisting }: CreateListingProps) => {
   // Get current user for a real seller id
   const { user } = useCurrentUser();
+  const { toast } = useToast();
+  const navigate = useNavigate();
   
   // State for category and subcategory selection
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | undefined>(undefined);
@@ -31,7 +33,6 @@ const CreateListing = ({ existingProduct, isRelisting }: CreateListingProps) => 
 
   // Fetch categories (only published ones)
   const { categories, loading: categoriesLoading } = useCategories();
-
   // Fetch subcategories based on selected category
   const { subcategories, loading: subcategoriesLoading } = useSubcategories(selectedCategoryId);
 
@@ -65,7 +66,21 @@ const CreateListing = ({ existingProduct, isRelisting }: CreateListingProps) => 
   const [bestOfferEnabled, setBestOfferEnabled] = useState<boolean>(false);
   const [minimumOffer, setMinimumOffer] = useState<number>(0);
 
-  const navigate = useNavigate();
+  // State to manage submit status
+  const [submitting, setSubmitting] = useState<boolean>(false);
+
+  // Handler to get basic info changes from BasicInformationForm
+  const handleBasicInfoChange = (info: {
+    title: string;
+    description: string;
+    price: string;
+    condition: string;
+    location: string;
+    currency: string;
+    subcategory: string;
+  }) => {
+    setBasicInfo(info);
+  };
 
   // Handle template selection from Template Manager pop-up
   const handleTemplateSelect = (template: Template) => {
@@ -88,27 +103,16 @@ const CreateListing = ({ existingProduct, isRelisting }: CreateListingProps) => 
     setShowImportModal(false);
   };
 
-  // Handler to get basic info changes from BasicInformationForm
-  const handleBasicInfoChange = (info: {
-    title: string;
-    description: string;
-    price: string;
-    condition: string;
-    location: string;
-    currency: string;
-    subcategory: string;
-  }) => {
-    setBasicInfo(info);
-  };
-
   // Submit handler – builds new listing with allowed columns
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!user || !user.id) {
-      toast.error('User not authenticated.');
+      toast({ title: "Authentication Error", description: "User not authenticated." });
       return;
     }
+
+    setSubmitting(true);
 
     const newListing = {
       title: basicInfo.title,
@@ -118,7 +122,6 @@ const CreateListing = ({ existingProduct, isRelisting }: CreateListingProps) => 
       seller_id: user.id,
       condition: basicInfo.condition,
       location: basicInfo.location,
-      // Category and subcategory come from the outer selectors.
       category: selectedCategoryId || "",
       subcategory: selectedSubcategoryId || basicInfo.subcategory || "",
       tags: selectedProduct?.tags || [],
@@ -133,11 +136,13 @@ const CreateListing = ({ existingProduct, isRelisting }: CreateListingProps) => 
       .from('products')
       .insert([newListing]);
 
+    setSubmitting(false);
+
     if (error) {
       console.error('Error inserting listing:', error);
-      toast.error('Failed to create listing');
+      toast({ title: "Submission Error", description: "Failed to create listing." });
     } else {
-      toast.success('Listing created successfully!');
+      toast({ title: "Success", description: "Listing created successfully!" });
       console.log('New listing created:', data);
       navigate('/retail/seller-dashboard/inventory');
     }
@@ -154,7 +159,6 @@ const CreateListing = ({ existingProduct, isRelisting }: CreateListingProps) => 
         setShowTemplateManager={setShowTemplateManager}
       />
 
-      {/* Category & Subcategory selection */}
       <form onSubmit={handleSubmit} className="space-y-8">
         {/* Category Select */}
         <div className="mb-4">
@@ -167,7 +171,6 @@ const CreateListing = ({ existingProduct, isRelisting }: CreateListingProps) => 
               onChange={(e) => {
                 const catId = e.target.value || undefined;
                 setSelectedCategoryId(catId);
-                // Reset subcategory and template when category changes
                 setSelectedSubcategoryId(undefined);
                 setSelectedTemplate(null);
                 setSelectedTemplateId(null);
@@ -194,7 +197,6 @@ const CreateListing = ({ existingProduct, isRelisting }: CreateListingProps) => 
               value={selectedSubcategoryId || ''}
               onChange={(e) => {
                 setSelectedSubcategoryId(e.target.value || undefined);
-                // Reset template selection when subcategory changes
                 setSelectedTemplate(null);
                 setSelectedTemplateId(null);
               }}
@@ -249,7 +251,7 @@ const CreateListing = ({ existingProduct, isRelisting }: CreateListingProps) => 
           </div>
         )}
 
-        {/* Pass the outer selected category (as its name) into BasicInformationForm */}
+        {/* Basic Information Form */}
         <BasicInformationForm 
           selectedProduct={selectedProduct} 
           presetCategory={
@@ -278,11 +280,11 @@ const CreateListing = ({ existingProduct, isRelisting }: CreateListingProps) => 
         />
 
         <div className="flex justify-end space-x-2">
-          <Button type="button" variant="outline">
+          <Button type="button" variant="outline" disabled={submitting}>
             Save as Draft
           </Button>
-          <Button type="submit">
-            {isRelisting ? 'Relist Item' : 'Create Listing'}
+          <Button type="submit" disabled={submitting}>
+            {isRelisting ? 'Relist Item' : (submitting ? 'Submitting...' : 'Create Listing')}
           </Button>
         </div>
       </form>
