@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { 
@@ -35,30 +34,43 @@ export const Categories = () => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchCategories = async () => {
+    const fetchCategoriesAndCounts = async () => {
       try {
         // Fetch categories from Supabase
-        const { data, error } = await supabase
+        const { data: categoriesData, error: categoriesError } = await supabase
           .from('categories')
           .select('*')
           .order('name');
         
-        if (error) {
-          throw error;
+        if (categoriesError) {
+          throw categoriesError;
         }
         
-        setCategories(data || []);
+        setCategories(categoriesData || []);
 
-        // Fetch counts of products per category
-        // In a real scenario, this should be a database query
-        // For now, we'll use random numbers
-        const counts: Record<string, number> = {};
-        data?.forEach(category => {
-          // Generate random count between 0-10
-          counts[category.name] = Math.floor(Math.random() * 10);
-        });
+        // Fetch actual subcategories from Supabase
+        const { data: subcategoriesData, error: subcategoriesError } = await supabase
+          .from('subcategories')
+          .select('category_id');
         
-        setCategoryCounts(counts);
+        if (subcategoriesError) {
+          throw subcategoriesError;
+        }
+
+        // Build counts dictionary keyed by category id
+        const countsById: Record<string, number> = {};
+        subcategoriesData?.forEach(subcat => {
+          if (subcat.category_id) {
+            countsById[subcat.category_id] = (countsById[subcat.category_id] || 0) + 1;
+          }
+        });
+
+        // Map counts to category names
+        const categoryCountsMap: Record<string, number> = {};
+        categoriesData?.forEach(category => {
+          categoryCountsMap[category.name] = countsById[category.id] || 0;
+        });
+        setCategoryCounts(categoryCountsMap);
       } catch (err) {
         console.error('Error fetching categories:', err);
         setError('Failed to load categories');
@@ -67,14 +79,12 @@ export const Categories = () => {
       }
     };
     
-    fetchCategories();
+    fetchCategoriesAndCounts();
   }, []);
 
   const getIcon = (iconName: string | null) => {
     const iconProps = { className: "h-6 w-6 mb-3" };
-    
     if (!iconName) return <Package {...iconProps} />;
-    
     switch (iconName) {
       case 'DeviceDesktop': return <Monitor {...iconProps} />;
       case 'Car': return <Car {...iconProps} />;
@@ -85,13 +95,13 @@ export const Categories = () => {
       case 'GamepadIcon': return <Gamepad2 {...iconProps} />;
       case 'Trophy': return <Trophy {...iconProps} />;
       case 'Dumbbell': return <Dumbbell {...iconProps} />;
-      case 'Toy': return <Gamepad2 {...iconProps} />; // Using Gamepad as placeholder for toy
+      case 'Toy': return <Gamepad2 {...iconProps} />;
       case 'Briefcase': return <Briefcase {...iconProps} />;
       case 'Music': return <Music2 {...iconProps} />;
       case 'History': return <History {...iconProps} />;
       case 'Library': return <Library {...iconProps} />;
       case 'HeartPulse': return <HeartPulse {...iconProps} />;
-      case 'Paw': return <Dog {...iconProps} />; // Changed from Paw to Dog icon
+      case 'Paw': return <Dog {...iconProps} />;
       case 'Baby': return <Baby {...iconProps} />;
       case 'Star': return <Star {...iconProps} />;
       case 'BookOpen': return <BookOpen {...iconProps} />;
@@ -105,11 +115,9 @@ export const Categories = () => {
   // Get the appropriate route for each category
   const getCategoryRoute = (categoryName: string) => {
     const name = categoryName.toLowerCase();
-    // For vehicles, we have a dedicated page with tabs
     if (name === 'motors' || name === 'vehicles') {
       return '/category/vehicles';
     }
-    // For other categories, use a standard format
     return `/category/${name}`;
   };
 
@@ -146,9 +154,7 @@ export const Categories = () => {
   return (
     <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 animate-fade-in">
       {categories.filter(category => category.is_published).map((category) => {
-        // Get the actual count from the calculated counts, or fall back to 0
         const actualCount = categoryCounts[category.name] || 0;
-        
         return (
           <Link key={category.id} to={getCategoryRoute(category.name)}>
             <Card className="transition-all duration-300 hover:shadow-md hover:-translate-y-1 bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-800">

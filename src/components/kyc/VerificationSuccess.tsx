@@ -29,7 +29,7 @@ const VerificationSuccess = () => {
       </div>
       
       <div className="pt-4">
-        <Link to="/login">
+        <Link to="/signin">
           <Button>
             Please sign in to your account
           </Button>

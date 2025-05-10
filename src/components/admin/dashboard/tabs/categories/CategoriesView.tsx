@@ -30,7 +30,7 @@ interface CategoriesViewProps {
   onCategoryFormOpenChange: (open: boolean) => void;
   onConfirmDeleteOpenChange: (open: boolean) => void;
   onConfirmDelete: () => Promise<void>;
-  onCategorySubmit: (categoryData: Omit<CategoryRow, "id" | "created_at" | "updated_at">) => Promise<CategoryRow | null>;
+  onCategorySubmit: (categoryData: Omit<CategoryRow, "id">) => Promise<CategoryRow | null>;
 }
 
 export const CategoriesView: React.FC<CategoriesViewProps> = ({
@@ -92,12 +92,12 @@ export const CategoriesView: React.FC<CategoriesViewProps> = ({
       
       {/* Category Form Dialog */}
       <CategoryForm 
-        open={categoryFormOpen} 
-        onOpenChange={onCategoryFormOpenChange}
-        onSubmit={onCategorySubmit}
-        category={selectedCategory}
-        isEdit={isEditMode}
-      />
+  open={categoryFormOpen} 
+  onOpenChange={onCategoryFormOpenChange}
+  onSubmit={onCategorySubmit} 
+  category={selectedCategory}
+  isEdit={isEditMode}
+/>
       
       {/* Category Delete Confirmation */}
       <Dialog open={confirmDeleteOpen} onOpenChange={onConfirmDeleteOpenChange}>

@@ -42,3 +42,23 @@ export const getProductById = async (id: string): Promise<Product | null> => {
     return null;
   }
 };
+
+export const upsertSeller = async (sellerData: {
+    id: string;
+    business_name: string;
+    email: string;
+    phone?: string;
+    rating?: number;
+    status?: string;
+    verified?: boolean;
+}) => {
+    const { data, error } = await supabase
+        .from('sellers')
+        .upsert(sellerData as any)
+        .single();
+    if (error) {
+        console.error('Error upserting seller:', error);
+        throw error;
+    }
+    return data;
+};

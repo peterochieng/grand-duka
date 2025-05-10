@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { CategoryRow } from "@/lib/types/supabaseTypes";
 import { Button } from "@/components/ui/button";
@@ -26,7 +25,9 @@ const tradingTypes = [
 interface CategoryFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSubmit: (category: Omit<CategoryRow, "id" | "created_at" | "updated_at">) => Promise<CategoryRow | null>;
+  // For creating a new category, id is omitted.
+  // When updating, the caller should merge the existing id.
+  onSubmit: (category: Omit<CategoryRow, "created_at" | "updated_at">) => Promise<CategoryRow | null>;
   category: CategoryRow | null;
   isEdit: boolean;
 }
@@ -50,30 +51,28 @@ export const CategoryForm: React.FC<CategoryFormProps> = ({
 
   useEffect(() => {
     if (category) {
-      console.log('Setting form data from category:', category);
       setFormData({
-        name: category.name || '',
-        description: category.description || '',
-        icon: category.icon || 'Package',
-        trading_type: category.trading_type || 'both',
-        is_published: category.is_published !== false,
-        restricted: category.restricted === true
+        id: category?.id,
+        name: category?.name || '',
+        description: category?.description || '',
+        icon: category?.icon || 'Package',
+        trading_type: category?.trading_type || 'both',
+        is_published: category?.is_published !== false,
+        restricted: category?.restricted === true,
       });
     } else {
-      console.log('Resetting form data to default values');
       setFormData({
         name: '',
         description: '',
         icon: 'Package',
         trading_type: 'both',
         is_published: true,
-        restricted: false
+        restricted: false,
       });
     }
   }, [category, open]);
 
   const handleChange = (field: keyof CategoryRow, value: any) => {
-    console.log('Form field changed:', field, value);
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
@@ -84,28 +83,49 @@ export const CategoryForm: React.FC<CategoryFormProps> = ({
     }
     
     setIsSubmitting(true);
-    console.log('Submitting category form with data:', formData);
-    
     try {
-      const categoryData = {
-        name: formData.name,
-        description: formData.description || '',
-        icon: formData.icon || 'Package',
-        trading_type: formData.trading_type || 'both',
-        is_published: formData.is_published !== false,
-        restricted: formData.restricted === true
-      } as Omit<CategoryRow, "id" | "created_at" | "updated_at">;
-      
-      console.log('Processed category data for submission:', categoryData);
-      const result = await onSubmit(categoryData);
-      
-      if (result) {
-        console.log('Category saved successfully:', result);
-        toast.success(isEdit ? 'Category updated successfully' : 'Category created successfully');
-        onOpenChange(false);
+      // Build payload. When NOT editing, we exclude the id.
+      if (isEdit) {
+        // When editing, include the id in the payload.
+        if (!formData.id) {
+          toast.error('Missing category id for update');
+          return;
+        }
+        const payload = {
+          id: formData.id,
+          name: formData.name,
+          description: formData.description || '',
+          icon: formData.icon || 'Package',
+          trading_type: formData.trading_type || 'both',
+          is_published: formData.is_published !== false,
+          restricted: formData.restricted === true
+        };
+        console.log('Submitting (update) category form with data:', payload);
+        const result = await onSubmit(payload);
+        if (result) {
+          toast.success('Category updated successfully');
+          onOpenChange(false);
+        } else {
+          toast.error('Failed to update category');
+        }
       } else {
-        console.error('No result returned from category submission');
-        toast.error(isEdit ? 'Failed to update category' : 'Failed to create category');
+        // When creating new, explicitly omit id from payload.
+        const payload = {
+          name: formData.name,
+          description: formData.description || '',
+          icon: formData.icon || 'Package',
+          trading_type: formData.trading_type || 'both',
+          is_published: formData.is_published !== false,
+          restricted: formData.restricted === true
+        };
+        console.log('Submitting (create) category form with data:', payload);
+        const result = await onSubmit(payload);
+        if (result) {
+          toast.success('Category created successfully');
+          onOpenChange(false);
+        } else {
+          toast.error('Failed to create category');
+        }
       }
     } catch (error) {
       console.error('Error submitting category:', error);

@@ -49,8 +49,8 @@ export const CategoryTable: React.FC<CategoryTableProps> = ({
   const [loadingCounts, setLoadingCounts] = useState(false);
 
   // Filter categories based on search term
-  const filteredCategories = categories.filter(category => 
-    category.name.toLowerCase().includes(localSearchTerm.toLowerCase())
+  const filteredCategories = categories?.filter(category => 
+    category?.name.toLowerCase().includes(localSearchTerm.toLowerCase())
   );
 
   // Get subcategory counts for each category

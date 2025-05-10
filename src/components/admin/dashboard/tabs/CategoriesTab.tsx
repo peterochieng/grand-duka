@@ -30,7 +30,6 @@ export const CategoriesTab = () => {
           {selectedCategory ? (
             <AdminSubcategoryManager 
               categoryId={selectedCategory.id} 
-              selectedCategory={selectedCategory}
             />
           ) : (
             <div className="flex flex-col items-center justify-center p-4">

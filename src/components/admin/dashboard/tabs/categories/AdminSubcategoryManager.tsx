@@ -1,132 +1,161 @@
-import React, { useState, useEffect } from 'react';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
-import { toast } from 'sonner';
-import { SubcategoriesView } from './SubcategoriesView';
-import { SubcategoryForm } from './SubcategoryForm';
-import { ConfirmationDialog } from './ConfirmationDialog';
-import { useSubcategories } from '@/hooks/useSubcategories';
+import React, { useState } from "react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
+import SubcategoryForm from "./SubcategoryForm";
+import { useSubcategories } from "@/hooks/useSubcategories";
+import { Switch } from "@/components/ui/switch";
+import { Lock, Unlock } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 interface AdminSubcategoryManagerProps {
-    categoryId: string; // the selected category's ID
-    selectedCategory: CategoryRow | null; // the full selected category
-  }
+  categoryId: string;
+}
 
-  export const AdminSubcategoryManager: React.FC<AdminSubcategoryManagerProps> = ({ categoryId, selectedCategory }) => {
-    const {
-      subcategories,
-      loading,
-      error,
-      fetchSubcategories,
-      addSubcategory,
-      updateSubcategory,
-      deleteSubcategory,
-    } = useSubcategories(categoryId);
-  
-    const [selectedSubcategory, setSelectedSubcategory] = useState<any>(null);
-    const [isEditMode, setIsEditMode] = useState<boolean>(false);
-    const [formOpen, setFormOpen] = useState<boolean>(false);
-    const [confirmDeleteOpen, setConfirmDeleteOpen] = useState<boolean>(false);
-  
-    console.log(categoryId, 'categoryId in AdminSubcategoryManager');
-  
-    // Re-fetch subcategories when the categoryId changes
-    useEffect(() => {
-      if (categoryId) {
-        fetchSubcategories(categoryId);
-      }
-    }, [categoryId, fetchSubcategories]);
-  
-    const handleAddOrUpdate = async (subcategoryData: any): Promise<any> => {
-      let result: any;
-      if (isEditMode && selectedSubcategory) {
-        result = await updateSubcategory(selectedSubcategory.id, subcategoryData);
-        toast.success('Subcategory updated successfully');
+export const AdminSubcategoryManager: React.FC<AdminSubcategoryManagerProps> = ({ categoryId }) => {
+  const {
+    subcategories,
+    loading,
+    error,
+    addSubcategory,
+    updateSubcategory, // Newly added update function in the hook
+    toggleSubcategoryVisibility,
+    toggleSubcategoryRestriction,
+  } = useSubcategories(categoryId);
+
+  const [formOpen, setFormOpen] = useState<boolean>(false);
+  const [selectedSubcategory, setSelectedSubcategory] = useState<any>(null);
+
+  // Handler distinguishes between add and update based on the presence of id
+  const handleAddOrUpdate = async (data: {
+    id?: string;
+    name: string;
+    is_published: boolean;
+    restricted: boolean;
+  }) => {
+    try {
+      if (data.id) {
+        // If updating, call updateSubcategory
+        await updateSubcategory({ ...data, category_id: categoryId });
       } else {
-        result = await addSubcategory({ ...subcategoryData, category_id: categoryId });
-        toast.success('Subcategory added successfully');
+        // If adding, include the category_id and call addSubcategory
+        await addSubcategory({ ...data, category_id: categoryId });
       }
+      setSelectedSubcategory(null);
       setFormOpen(false);
-      return result;
-    };
-  
-    const handleDelete = async () => {
-      if (selectedSubcategory) {
-        await deleteSubcategory(selectedSubcategory.id);
-        toast.success('Subcategory deleted successfully');
-        setConfirmDeleteOpen(false);
-      }
-    };
-  
-    console.log(subcategories, 'subcategories in SubcategoriesView');
-  
-    return (
-      <div className="border rounded-md p-4 mt-4">
-        <h3 className="text-lg font-semibold mb-2">Manage Subcategories</h3>
-        
-        {error && <p className="text-red-600">Error loading subcategories</p>}
-  
-        <SubcategoriesView 
-          selectedCategory={selectedCategory}  // pass the full category object here
-          subcategories={subcategories}
-          loading={loading}
-          onEdit={(subcat: any) => {
-            setSelectedSubcategory(subcat);
-            setIsEditMode(true);
-            setFormOpen(true);
-          }}
-          onDelete={(subcat: any) => {
-            setSelectedSubcategory(subcat);
-            setConfirmDeleteOpen(true);
-          }}
-          // Pass along any other required callbacks as already set up
-          onAddSubcategory={() => {
-            setIsEditMode(false);
-            setSelectedSubcategory(null);
-            setFormOpen(true);
-          }}
-          onCancelEditing={() => { }}
-          onSaveEditing={() => { }}
-          onToggleVisibility={() => { }}
-          onEditSubcategoryChange={() => { }}
-          onSubcategoryFormOpenChange={setFormOpen}
-          onConfirmDeleteOpenChange={setConfirmDeleteOpen}
-          onConfirmDelete={handleDelete}
-          onSubcategorySubmit={handleAddOrUpdate}
-          onChangeTab={() => { }}
-          onRetry={() => { }}
-        />
-  
-        {/* Subcategory Form Dialog */}
-        <Dialog open={formOpen} onOpenChange={setFormOpen}>
-  <DialogContent>
-    <SubcategoryForm
-      open={formOpen}
-      onSubmit={handleAddOrUpdate}
-      subcategory={selectedSubcategory}
-      categoryId={categoryId}
-      isEdit={isEditMode}
-      onOpenChange={setFormOpen}
-    />
-  </DialogContent>
-</Dialog>
-  
-        {/* Delete Confirmation Dialog */}
-        <Dialog open={confirmDeleteOpen} onOpenChange={setConfirmDeleteOpen}>
-          <DialogContent>
-            <ConfirmationDialog 
-              open={confirmDeleteOpen}
-              onOpenChange={setConfirmDeleteOpen}
-              title="Delete Subcategory"
-              description={`Are you sure you want to delete subcategory "${selectedSubcategory?.name}"?`}
-              onConfirm={handleDelete}
-              onCancel={() => setConfirmDeleteOpen(false)}
-              confirmLabel="Delete"
-              confirmVariant="destructive"
-            />
-          </DialogContent>
-        </Dialog>
-      </div>
-    );
+    } catch (error) {
+      console.error("Error submitting subcategory:", error);
+    }
   };
-  
-  export default AdminSubcategoryManager;
+
+  const handleToggleVisibility = async (id: string, currentState: boolean) => {
+    try {
+      await toggleSubcategoryVisibility(id, !currentState);
+    } catch (error) {
+      console.error("Error toggling subcategory visibility:", error);
+    }
+  };
+
+  const handleToggleRestriction = async (id: string, currentState: boolean) => {
+    try {
+      await toggleSubcategoryRestriction(id, !currentState);
+    } catch (error) {
+      console.error("Error toggling subcategory restriction:", error);
+    }
+  };
+
+  return (
+    <div>
+      <Card>
+        <CardContent className="p-4">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-lg font-semibold">Subcategories</h3>
+            <button
+              onClick={() => setFormOpen(true)}
+              className="px-4 py-2 bg-blue-500 text-white rounded"
+            >
+              Add Subcategory
+            </button>
+          </div>
+          {loading ? (
+            <p>Loading subcategories...</p>
+          ) : error ? (
+            <p>Error loading subcategories</p>
+          ) : subcategories.length === 0 ? (
+            <p>No subcategories available.</p>
+          ) : (
+            <table className="min-w-full border-collapse">
+              <thead>
+                <tr>
+                  <th className="border p-2 text-left">Name</th>
+                  <th className="border p-2 text-center">Published</th>
+                  <th className="border p-2 text-center">Restricted</th>
+                  <th className="border p-2">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {subcategories.map((subcat) => (
+                  <tr key={subcat.id}>
+                    <td className="border p-2">{subcat.name}</td>
+                    <td className="border p-2 text-center">
+                      <Switch
+                        checked={subcat.is_published}
+                        onCheckedChange={() =>
+                          handleToggleVisibility(
+                            subcat.id,
+                            subcat.is_published
+                          )
+                        }
+                      />
+                    </td>
+                    <td className="border p-2 text-center">
+                      <Button
+                        onClick={() =>
+                          handleToggleRestriction(subcat.id, subcat.restricted)
+                        }
+                        variant="ghost"
+                        size="sm"
+                      >
+                        {subcat.restricted ? (
+                          <Lock size={16} />
+                        ) : (
+                          <Unlock size={16} />
+                        )}
+                      </Button>
+                    </td>
+                    <td className="border p-2">
+                      <button
+                        onClick={() => {
+                          setSelectedSubcategory(subcat);
+                          setFormOpen(true);
+                        }}
+                        className="px-3 py-1 bg-green-500 text-white rounded mr-2 text-sm"
+                      >
+                        Edit
+                      </button>
+                      {/* Additional actions if needed */}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </CardContent>
+      </Card>
+
+      <Dialog open={formOpen} onOpenChange={setFormOpen}>
+        <DialogContent>
+          <SubcategoryForm
+            onSubmit={handleAddOrUpdate}
+            initialData={selectedSubcategory}
+            onClose={() => {
+              setFormOpen(false);
+              setSelectedSubcategory(null);
+            }}
+          />
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+};
+
+export default AdminSubcategoryManager;

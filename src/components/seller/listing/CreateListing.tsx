@@ -26,10 +26,18 @@ const CreateListing = ({ existingProduct, isRelisting }: CreateListingProps) => 
   const { user } = useCurrentUser();
   const { toast } = useToast();
   const navigate = useNavigate();
-  
+
   // State for category and subcategory selection
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | undefined>(undefined);
   const [selectedSubcategoryId, setSelectedSubcategoryId] = useState<string | undefined>(undefined);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+
+  // Handler for file input changes
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      setImageFile(e.target.files[0]);
+    }
+  };
 
   // Fetch categories (only published ones)
   const { categories, loading: categoriesLoading } = useCategories();
@@ -103,6 +111,14 @@ const CreateListing = ({ existingProduct, isRelisting }: CreateListingProps) => 
     setShowImportModal(false);
   };
 
+  // Compute category objects and whether the selected category/subcategory is restricted.
+  const selectedCategoryObject = categories.find((cat: any) => cat.id === selectedCategoryId);
+  const selectedSubcategoryObject = subcategories.find((sc: any) => sc.id === selectedSubcategoryId);
+  const isUnderReview =
+    selectedCategoryObject?.restricted ||
+    selectedCategoryObject?.requires_review ||
+    selectedSubcategoryObject?.restricted;
+
   // Submit handler – builds new listing with allowed columns
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -114,7 +130,27 @@ const CreateListing = ({ existingProduct, isRelisting }: CreateListingProps) => 
 
     setSubmitting(true);
 
-    const newListing = {
+    // Determine approval_status based on category/subcategory flags.
+    const approvalStatus = isUnderReview ? "pending_review" : "pending";
+
+    // Build listingtypes from state values
+    const listingTypes = {
+      auction: {
+        enabled: auctionEnabled,
+        startingBid,
+        reservePrice
+      },
+      buyItNow: {
+        enabled: fixedPriceEnabled,
+        price: fixedPrice
+      },
+      bestOffer: {
+        enabled: bestOfferEnabled,
+        minOffer: minimumOffer
+      }
+    };
+
+    const newListing: any = {
       title: basicInfo.title,
       description: basicInfo.description,
       price: Number(basicInfo.price),
@@ -127,24 +163,58 @@ const CreateListing = ({ existingProduct, isRelisting }: CreateListingProps) => 
       tags: selectedProduct?.tags || [],
       shipping: selectedProduct?.shipping || 0,
       featured: selectedProduct?.featured || false,
-      approval_status: "pending",
+      approval_status: approvalStatus,
       created_at: new Date(),
-      updated_at: new Date()
+      updated_at: new Date(),
+      listingtypes: listingTypes,
+      template: selectedTemplate
+        ? {
+            id: selectedTemplate.id,
+            name: selectedTemplate.name,
+            type: selectedTemplate.type
+          }
+        : null
     };
 
+    // If an image file is selected, upload it and add its URL to newListing
+    if (imageFile) {
+      const fileExt = imageFile.name.split('.').pop();
+      const fileName = `${Date.now()}.${fileExt}`;
+      const filePath = `products/${user.id}/${fileName}`;
+
+      const { error: uploadError } = await supabase
+        .storage
+        .from('product-images')
+        .upload(filePath, imageFile);
+
+      if (uploadError) {
+        console.error("Error uploading image:", uploadError);
+        toast({ title: "Image Upload Error", description: "Failed to upload the image." });
+        setSubmitting(false);
+        return;
+      }
+
+      const { publicURL } = supabase
+        .storage
+        .from('product-images')
+        .getPublicUrl(filePath);
+
+      newListing.image = publicURL;
+    }
+
     const { data, error } = await supabase
-      .from('products')
+      .from("products")
       .insert([newListing]);
 
     setSubmitting(false);
 
     if (error) {
-      console.error('Error inserting listing:', error);
+      console.error("Error inserting listing:", error);
       toast({ title: "Submission Error", description: "Failed to create listing." });
     } else {
       toast({ title: "Success", description: "Listing created successfully!" });
-      console.log('New listing created:', data);
-      navigate('/retail/seller-dashboard/inventory');
+      console.log("New listing created:", data);
+      navigate("/retail/seller-dashboard/inventory");
     }
   };
 
@@ -212,6 +282,15 @@ const CreateListing = ({ existingProduct, isRelisting }: CreateListingProps) => 
           )}
         </div>
 
+        {/* Restricted Notice */}
+        {isUnderReview && (
+          <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-md mb-4">
+            <p className="text-sm text-blue-800">
+              Note: This category/subcategory is restricted. Your listing will be subject to admin review before it goes live.
+            </p>
+          </div>
+        )}
+
         {/* Template Selection */}
         {selectedSubcategoryId && (
           <div className="mb-4">
@@ -250,6 +329,17 @@ const CreateListing = ({ existingProduct, isRelisting }: CreateListingProps) => 
             <ListingTemplateBanner template={selectedTemplate} />
           </div>
         )}
+
+        {/* New Product Image Field */}
+        <div className="mb-4">
+          <label className="block text-sm font-medium mb-1">Product Image</label>
+          <input
+            type="file"
+            accept="image/*"
+            onChange={handleFileChange}
+            className="border rounded p-2 w-full"
+          />
+        </div>
 
         {/* Basic Information Form */}
         <BasicInformationForm 

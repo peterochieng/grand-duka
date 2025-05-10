@@ -22,6 +22,7 @@ import EditListing from './components/seller/listing/EditListing';
 import { AuthGuard } from '@/components/auth/AuthGuard';
 import SearchResults from './components/SearchResults';
 import ProductDetail from './pages/ProductDetail';
+import CategoryPage from './pages/CategoryPage';
 
 function App() {
   return (
@@ -39,6 +40,7 @@ function App() {
           <Route path="/retail" element={<Retail />} />
           <Route path="/wholesale" element={<Wholesale />} />
           <Route path="/wholesale/shop-dashboard" element={<WholesaleShopDashboard />} />
+          <Route path="/category/:name" element={<CategoryPage />} />
 
           {/* Protected Routes: require sign-in */}
           <Route

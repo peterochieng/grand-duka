@@ -71,7 +71,7 @@ export const useCategoryActions = () => {
     }
   }, [selectedCategory, removeCategory]);
 
-  const handleCategorySubmit = useCallback(async (categoryData: Omit<CategoryRow, "id" | "created_at" | "updated_at">) => {
+  const handleCategorySubmit = useCallback(async (categoryData: CategoryRow) => {
     console.log('Submitting category data:', categoryData, 'isEditMode:', isEditMode);
     
     try {

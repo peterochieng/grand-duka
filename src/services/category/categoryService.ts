@@ -45,9 +45,23 @@ export const createCategory = async (
   category: Omit<CategoryRow, 'id' | 'created_at' | 'updated_at'>
 ): Promise<CategoryRow | null> => {
   try {
-    console.log('Creating category with data:', category);
+    // First, check if a category with the same name already exists
+    const { data: existing, error: searchError } = await supabase
+      .from('categories')
+      .select('id')
+      .eq('name', category.name)
+      .maybeSingle();
     
-    // Ensure all required fields are present
+    if (searchError) {
+      console.error('Error checking for existing category:', searchError);
+      throw new Error(searchError.message);
+    }
+    
+    if (existing) {
+      throw new Error('A category with this name already exists');
+    }
+    
+    // Proceed with insertion if no duplicate is found
     const categoryData = {
       name: category.name,
       description: category.description || '',
@@ -57,6 +71,7 @@ export const createCategory = async (
       icon: category.icon || 'Package'
     };
     
+    console.log('Creating category with data:', categoryData);
     const { data, error } = await supabase
       .from('categories')
       .insert([categoryData])
@@ -68,7 +83,7 @@ export const createCategory = async (
     }
     
     if (!data || data.length === 0) {
-      throw new Error('No data returned from insert operation');
+      throw new Error('No data returned from the insert operation');
     }
     
     console.log('Category created successfully:', data[0]);

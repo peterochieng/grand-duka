@@ -63,7 +63,7 @@ const AdminDashboard = ({ currentRole }: AdminDashboardProps) => {
   };
 
   if (!isAdmin) {
-    return null; // Avoid rendering while checking authentication
+    return null;
   }
 
   return (

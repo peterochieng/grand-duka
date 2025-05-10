@@ -26,6 +26,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { supabase } from '@/integrations/supabase/client';
+import { upsertSeller } from '@/services/product';
 
 const SignUp = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -79,6 +80,23 @@ const SignUp = () => {
       }
 
       console.log('Sign-up successful:', data);
+
+      // Check if the new account is for a seller or shop owner
+      if (data?.user && (userType === 'seller' || userType === 'shop-owner')) {
+        try {
+          await upsertSeller({
+            id: data.user.id,
+            business_name: name, // you might want to adjust this if you capture a different business name
+            email: email,
+            // Optionally include more fields such as phone, rating etc.
+            verified: false,
+            status: 'pending'
+          });
+        } catch (sellerError) {
+          console.error('Error creating seller record:', sellerError);
+          // Optionally, show an error toast or roll back sign-up
+        }
+      }
 
       toast({
         title: 'Success',
@@ -292,7 +310,7 @@ const SignUp = () => {
                 </Button>
               </div>
               <p className="text-xs text-muted-foreground mt-1">
-                At least 8 characters with letters, numbers & symbols
+                At least 8 characters with letters, numbers &amp; symbols
               </p>
             </div>
 
