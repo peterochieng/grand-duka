@@ -20,6 +20,9 @@ import { Check, X, ArrowUpDown, Loader2 } from "lucide-react";
 import { ProductWithApproval, getProductsForApproval, approveProduct, rejectProduct } from '@/services/productApprovalService';
 import { toast } from 'sonner';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
+import { useCategories } from '@/hooks/useCategories';
+// Import our new hook to get all subcategories.
+import { useAllSubcategories } from '@/hooks/useAllSubcategories';
 import {
   Dialog,
   DialogContent,
@@ -29,24 +32,18 @@ import {
   DialogFooter
 } from "@/components/ui/dialog";
 
-const categoryMap: Record<string, string> = {
-  "f2d621ff-e944-450b-a745-ef28f8f0b16d": "Watches",
-  "ffceb92c-4cd3-4286-9568-beb4319d8302": "Electronics",
-};
-
-const subcategoryMap: Record<string, string> = {
-  "63a6df0f-dd69-4707-b2a6-a1fb6aded5e4": "Men's Watches",
-  "c34992b0-8e5a-41c8-8a0a-0131221b7e3e": "Smartphones",
-};
-
 export const ProductApprovals = () => {
   const [products, setProducts] = useState<ProductWithApproval[]>([]);
   const [loading, setLoading] = useState(true);
   const [sortBy, setSortBy] = useState<'oldest' | 'newest'>('newest');
   const [processingProducts, setProcessingProducts] = useState<Set<string>>(new Set());
   const { user } = useCurrentUser();
+  // Fetch main categories from the database.
+  const { categories: dbCategories, loading: catLoading } = useCategories();
+  // Use the new hook to fetch all subcategories.
+  const { subcategories: dbSubcategories, loading: subCatLoading } = useAllSubcategories();
 
-  // New state for rejection feedback dialog
+  // State for rejection feedback dialog.
   const [showRejectDialog, setShowRejectDialog] = useState(false);
   const [currentRejectProductId, setCurrentRejectProductId] = useState<string>('');
   const [rejectionFeedback, setRejectionFeedback] = useState<string>('');
@@ -55,10 +52,8 @@ export const ProductApprovals = () => {
     const fetchProducts = async () => {
       try {
         setLoading(true);
+        // getProductsForApproval returns only products pending review.
         const pendingProducts = await getProductsForApproval();
-        console.log(pendingProducts, 'pendingProducts in ProductApprovals');
-        
-        // Sort products by creation date
         const sortedProducts = [...pendingProducts].sort((a, b) => {
           const dateA = new Date(a.createdAt).getTime();
           const dateB = new Date(b.createdAt).getTime();
@@ -101,14 +96,12 @@ export const ProductApprovals = () => {
     }
   };
 
-  // Open reject dialog instead of calling reject immediately
   const openRejectDialog = (productId: string) => {
     setCurrentRejectProductId(productId);
     setRejectionFeedback('');
     setShowRejectDialog(true);
   };
 
-  // Submit rejection along with feedback
   const handleRejectSubmit = async () => {
     if (!user?.id) {
       toast.error('User information not available');
@@ -140,12 +133,40 @@ export const ProductApprovals = () => {
     setSortBy(prev => prev === 'newest' ? 'oldest' : 'newest');
   };
 
+  const renderCategoryCell = (product: ProductWithApproval) => {
+    let mainCatName = "Unknown Category";
+    let subCatName = "";
+    if (product.category) {
+      if (product.category.length > 36) {
+        const mainCatId = product.category.substring(0, 36);
+        const subCatId = product.category.substring(36);
+        const mainCat = dbCategories?.find(cat => cat.id === mainCatId);
+        const subCat = dbSubcategories?.find(sub => sub.id === subCatId);
+        mainCatName = mainCat ? mainCat.name : "Unknown Category";
+        subCatName = subCat ? subCat.name : "Unknown Subcategory";
+      } else {
+        const mainCat = dbCategories?.find(cat => cat.id === product.category);
+        mainCatName = mainCat ? mainCat.name : "Unknown Category";
+        if (product.subcategory) {
+          const subCat = dbSubcategories?.find(sub => sub.id === product.subcategory);
+          subCatName = subCat ? subCat.name : "Unknown Subcategory";
+        }
+      }
+    }
+    return (
+      <>
+        <Badge variant="outline">{mainCatName}</Badge>
+        {subCatName && <Badge variant="outline" className="ml-1">{subCatName}</Badge>}
+      </>
+    );
+  };
+
   return (
     <Card>
       <CardHeader className="pb-2">
         <CardTitle className="text-lg">Product Approvals</CardTitle>
         <CardDescription>
-          Review and approve product listings submitted by sellers
+          Review product listings submitted by sellers before publishing.
         </CardDescription>
       </CardHeader>
       
@@ -166,10 +187,10 @@ export const ProductApprovals = () => {
                 {sortBy === 'newest' ? 'Newest First' : 'Oldest First'}
               </Button>
             </div>
-            
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead>Image</TableHead>
                   <TableHead>Title</TableHead>
                   <TableHead>Category</TableHead>
                   <TableHead>Price</TableHead>
@@ -181,18 +202,18 @@ export const ProductApprovals = () => {
               <TableBody>
                 {products?.map((product) => (
                   <TableRow key={product.id}>
+                    <TableCell>
+                      <img
+                        src={product.image || '/placeholder-image.png'}
+                        alt={product.title}
+                        className="w-16 h-16 object-cover rounded"
+                      />
+                    </TableCell>
                     <TableCell className="font-medium">
                       {product.title}
                     </TableCell>
                     <TableCell>
-                      <Badge variant="outline">
-                        {categoryMap[product.category] || product.category}
-                      </Badge>
-                      {product.subcategory && (
-                        <Badge variant="outline" className="ml-1">
-                          {subcategoryMap[product.subcategory] || product.subcategory}
-                        </Badge>
-                      )}
+                      {renderCategoryCell(product)}
                     </TableCell>
                     <TableCell>
                       {product.currency} {product.price.toFixed(2)}

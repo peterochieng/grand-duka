@@ -22,29 +22,43 @@ interface CreateListingProps {
 }
 
 const CreateListing = ({ existingProduct, isRelisting }: CreateListingProps) => {
-  // Get current user for a real seller id
   const { user } = useCurrentUser();
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  // State for category and subcategory selection
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | undefined>(undefined);
   const [selectedSubcategoryId, setSelectedSubcategoryId] = useState<string | undefined>(undefined);
-  const [imageFile, setImageFile] = useState<File | null>(null);
 
-  // Handler for file input changes
+  // Change state here to store an array of files instead of a single File
+  const [imageFiles, setImageFiles] = useState<File[]>([]);
+  // New state to store image preview URLs
+  const [imagePreviews, setImagePreviews] = useState<string[]>([]);
+
+  // Updated handler to support multiple files and generate previews
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-      setImageFile(e.target.files[0]);
+      const filesArray = Array.from(e.target.files);
+      // Revoke previous preview URLs in order to avoid memory leaks
+      imagePreviews.forEach((url) => URL.revokeObjectURL(url));
+      setImageFiles(filesArray);
+      setImagePreviews(filesArray.map((file) => URL.createObjectURL(file)));
     }
   };
 
-  // Fetch categories (only published ones)
+  // Handler to remove an image from selection (and its preview)
+  const removeImage = (index: number) => {
+    const updatedFiles = [...imageFiles];
+    const updatedPreviews = [...imagePreviews];
+    URL.revokeObjectURL(updatedPreviews[index]);
+    updatedFiles.splice(index, 1);
+    updatedPreviews.splice(index, 1);
+    setImageFiles(updatedFiles);
+    setImagePreviews(updatedPreviews);
+  };
+
   const { categories, loading: categoriesLoading } = useCategories();
-  // Fetch subcategories based on selected category
   const { subcategories, loading: subcategoriesLoading } = useSubcategories(selectedCategoryId);
 
-  // Template & product selection states
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null);
   const { templates: activeTemplates, loading: templatesLoading } = useActiveTemplates(selectedSubcategoryId);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(existingProduct || null);
@@ -52,7 +66,6 @@ const CreateListing = ({ existingProduct, isRelisting }: CreateListingProps) => 
   const [showImportModal, setShowImportModal] = useState<boolean>(false);
   const [showTemplateManager, setShowTemplateManager] = useState<boolean>(false);
 
-  // Basic info state from BasicInformationForm – initialize with empty values
   const [basicInfo, setBasicInfo] = useState({
     title: '',
     description: '',
@@ -63,7 +76,6 @@ const CreateListing = ({ existingProduct, isRelisting }: CreateListingProps) => 
     subcategory: ''
   });
 
-  // Dummy state for listing options
   const [listingType, setListingType] = useState<string>('fixed');
   const [auctionEnabled, setAuctionEnabled] = useState<boolean>(false);
   const [startingBid, setStartingBid] = useState<number>(0);
@@ -73,11 +85,8 @@ const CreateListing = ({ existingProduct, isRelisting }: CreateListingProps) => 
   const [fixedPrice, setFixedPrice] = useState<number>(0);
   const [bestOfferEnabled, setBestOfferEnabled] = useState<boolean>(false);
   const [minimumOffer, setMinimumOffer] = useState<number>(0);
-
-  // State to manage submit status
   const [submitting, setSubmitting] = useState<boolean>(false);
 
-  // Handler to get basic info changes from BasicInformationForm
   const handleBasicInfoChange = (info: {
     title: string;
     description: string;
@@ -90,14 +99,12 @@ const CreateListing = ({ existingProduct, isRelisting }: CreateListingProps) => 
     setBasicInfo(info);
   };
 
-  // Handle template selection from Template Manager pop-up
   const handleTemplateSelect = (template: Template) => {
     setSelectedTemplate(template);
     setSelectedTemplateId(template.id);
     setShowTemplateManager(false);
   };
 
-  // Handler for selecting an existing product via Import Modal
   const handleExistingProductSelect = (product: Product) => {
     setSelectedProduct(product);
     setListingType(product.listingTypes?.auction?.enabled ? 'auction' : 'fixed');
@@ -111,7 +118,6 @@ const CreateListing = ({ existingProduct, isRelisting }: CreateListingProps) => 
     setShowImportModal(false);
   };
 
-  // Compute category objects and whether the selected category/subcategory is restricted.
   const selectedCategoryObject = categories.find((cat: any) => cat.id === selectedCategoryId);
   const selectedSubcategoryObject = subcategories.find((sc: any) => sc.id === selectedSubcategoryId);
   const isUnderReview =
@@ -119,7 +125,6 @@ const CreateListing = ({ existingProduct, isRelisting }: CreateListingProps) => 
     selectedCategoryObject?.requires_review ||
     selectedSubcategoryObject?.restricted;
 
-  // Submit handler – builds new listing with allowed columns
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -129,25 +134,12 @@ const CreateListing = ({ existingProduct, isRelisting }: CreateListingProps) => 
     }
 
     setSubmitting(true);
-
-    // Determine approval_status based on category/subcategory flags.
     const approvalStatus = isUnderReview ? "pending_review" : "pending";
 
-    // Build listingtypes from state values
     const listingTypes = {
-      auction: {
-        enabled: auctionEnabled,
-        startingBid,
-        reservePrice
-      },
-      buyItNow: {
-        enabled: fixedPriceEnabled,
-        price: fixedPrice
-      },
-      bestOffer: {
-        enabled: bestOfferEnabled,
-        minOffer: minimumOffer
-      }
+      auction: { enabled: auctionEnabled, startingBid, reservePrice },
+      buyItNow: { enabled: fixedPriceEnabled, price: fixedPrice },
+      bestOffer: { enabled: bestOfferEnabled, minOffer: minimumOffer }
     };
 
     const newListing: any = {
@@ -168,38 +160,44 @@ const CreateListing = ({ existingProduct, isRelisting }: CreateListingProps) => 
       updated_at: new Date(),
       listingtypes: listingTypes,
       template: selectedTemplate
-        ? {
-            id: selectedTemplate.id,
-            name: selectedTemplate.name,
-            type: selectedTemplate.type
-          }
+        ? { id: selectedTemplate.id, name: selectedTemplate.name, type: selectedTemplate.type }
         : null
     };
 
-    // If an image file is selected, upload it and add its URL to newListing
-    if (imageFile) {
-      const fileExt = imageFile.name.split('.').pop();
-      const fileName = `${Date.now()}.${fileExt}`;
-      const filePath = `products/${user.id}/${fileName}`;
+    // Upload each selected image and collect their public URLs
+    if (imageFiles.length > 0) {
+      const imageUrls: string[] = [];
+      for (const imageFile of imageFiles) {
+        const fileExt = imageFile.name.split('.').pop();
+        const fileName = `${Date.now()}-${imageFile.name}`;
+        const filePath = `products/${user.id}/${fileName}`;
 
-      const { error: uploadError } = await supabase
-        .storage
-        .from('product-images')
-        .upload(filePath, imageFile);
+        const { error: uploadError } = await supabase
+          .storage
+          .from('product-images')
+          .upload(filePath, imageFile);
 
-      if (uploadError) {
-        console.error("Error uploading image:", uploadError);
-        toast({ title: "Image Upload Error", description: "Failed to upload the image." });
-        setSubmitting(false);
-        return;
+        if (uploadError) {
+          console.error("Error uploading image:", uploadError);
+          toast({ title: "Image Upload Error", description: "Failed to upload one or more images." });
+          setSubmitting(false);
+          return;
+        }
+
+        const { publicURL } = supabase
+          .storage
+          .from('product-images')
+          .getPublicUrl(filePath);
+        if (publicURL) {
+          imageUrls.push(publicURL);
+        }
       }
-
-      const { publicURL } = supabase
-        .storage
-        .from('product-images')
-        .getPublicUrl(filePath);
-
-      newListing.image = publicURL;
+      // Save the uploaded images array in the new listing and
+      // optionally set the "image" field to the first in the array as fallback.
+      newListing.images = imageUrls;
+      if (!newListing.image && imageUrls.length > 0) {
+        newListing.image = imageUrls[0];
+      }
     }
 
     const { data, error } = await supabase
@@ -207,7 +205,6 @@ const CreateListing = ({ existingProduct, isRelisting }: CreateListingProps) => 
       .insert([newListing]);
 
     setSubmitting(false);
-
     if (error) {
       console.error("Error inserting listing:", error);
       toast({ title: "Submission Error", description: "Failed to create listing." });
@@ -323,23 +320,42 @@ const CreateListing = ({ existingProduct, isRelisting }: CreateListingProps) => 
           </div>
         )}
 
-        {/* If a template is selected, display its banner */}
+        {/* Template Banner */}
         {selectedTemplate && (
           <div className="mb-4">
             <ListingTemplateBanner template={selectedTemplate} />
           </div>
         )}
 
-        {/* New Product Image Field */}
+        {/* New Product Image Field: allow multiple image selection */}
         <div className="mb-4">
-          <label className="block text-sm font-medium mb-1">Product Image</label>
+          <label className="block text-sm font-medium mb-1">Product Images</label>
           <input
             type="file"
             accept="image/*"
+            multiple
             onChange={handleFileChange}
             className="border rounded p-2 w-full"
           />
         </div>
+
+        {/* Image Preview Area */}
+        {imagePreviews.length > 0 && (
+          <div className="grid grid-cols-3 gap-2 mt-2">
+            {imagePreviews.map((src, i) => (
+              <div key={i} className="relative border rounded overflow-hidden">
+                <img src={src} alt={`Preview ${i + 1}`} className="w-full h-24 object-cover" />
+                <button
+                  type="button"
+                  onClick={() => removeImage(i)}
+                  className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 text-xs"
+                >
+                  X
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* Basic Information Form */}
         <BasicInformationForm 
@@ -394,4 +410,4 @@ const CreateListing = ({ existingProduct, isRelisting }: CreateListingProps) => 
   );
 };
 
-export default CreateListing;
+export default CreateListing; 

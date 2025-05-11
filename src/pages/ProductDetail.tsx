@@ -70,7 +70,12 @@ const ProductDetail: React.FC = () => {
           <ProductBreadcrumbs category={product.category} title={product.title} />
           
           <div className="flex flex-col md:flex-row gap-8">
-            <ProductImages mainImage={product.image} title={product.title} isFavorite={false} onToggleFavorite={() => {}} />
+            <ProductImages 
+  images={product.images && product.images.length > 0 ? product.images : [product.image || '/placeholder-image.png']}
+  title={product.title} 
+  isFavorite={false} 
+  onToggleFavorite={() => {}} 
+/>
             <ProductSidebar product={product} />
           </div>
 

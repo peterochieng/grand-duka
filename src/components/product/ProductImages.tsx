@@ -1,27 +1,25 @@
-
 import { useState } from 'react';
 import { Heart } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { motion } from 'framer-motion';
 
 interface ProductImagesProps {
-  mainImage: string;
+  images: string[];
   title: string;
   isFavorite: boolean;
   onToggleFavorite: () => void;
 }
 
 export const ProductImages = ({ 
-  mainImage, 
+  images, 
   title, 
   isFavorite, 
   onToggleFavorite 
 }: ProductImagesProps) => {
-  const [selectedImage, setSelectedImage] = useState(mainImage);
-  
-  // In a real app you'd have multiple images
-  const images = [mainImage, mainImage, mainImage, mainImage];
-  
+  // Use the first image as the initial selected image, or a fallback if none provided
+  const initialImage = images && images.length > 0 ? images[0] : '/placeholder-image.png';
+  const [selectedImage, setSelectedImage] = useState(initialImage);
+
   return (
     <motion.div 
       className="w-full md:w-2/3"
@@ -46,19 +44,21 @@ export const ProductImages = ({
         </Button>
       </div>
       
-      <div className="grid grid-cols-4 gap-2">
-        {images.map((img, i) => (
-          <button
-            key={i}
-            className={`border rounded-md overflow-hidden transition-all ${
-              selectedImage === img ? 'border-primary ring-2 ring-primary/20' : 'border-gray-200 dark:border-gray-800'
-            }`}
-            onClick={() => setSelectedImage(img)}
-          >
-            <img src={img} alt={`Thumbnail ${i+1}`} className="aspect-square object-cover" />
-          </button>
-        ))}
-      </div>
+      {images && images.length > 1 && (
+        <div className="grid grid-cols-4 gap-2">
+          {images.map((img, i) => (
+            <button
+              key={i}
+              className={`border rounded-md overflow-hidden transition-all ${
+                selectedImage === img ? 'border-primary ring-2 ring-primary/20' : 'border-gray-200 dark:border-gray-800'
+              }`}
+              onClick={() => setSelectedImage(img)}
+            >
+              <img src={img} alt={`Thumbnail ${i + 1}`} className="aspect-square object-cover" />
+            </button>
+          ))}
+        </div>
+      )}
     </motion.div>
   );
 };

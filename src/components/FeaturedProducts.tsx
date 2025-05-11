@@ -19,7 +19,7 @@ export const FeaturedProducts = () => {
       if (error) {
         console.error("Error fetching products:", error);
       } else {
-        setProducts(data as any);
+        setProducts(data as Product[]);
       }
       setLoading(false);
     };
@@ -34,6 +34,16 @@ export const FeaturedProducts = () => {
           <div key={i} className="h-64 bg-gray-200 animate-pulse rounded" />
         ))}
       </div>
+    );
+  }
+
+  if (!products.length) {
+    return (
+      <section className="my-12 animate-fade-in animation-delay-200">
+        <div className="text-center text-lg text-muted-foreground">
+          There are no products available at this time.
+        </div>
+      </section>
     );
   }
 

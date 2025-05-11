@@ -24,6 +24,7 @@ export const useSubcategories = (categoryId?: string) => {
       setSubcategories([]);
     } else {
       setSubcategories(data || []);
+      console.log(data)
     }
     setLoading(false);
   }, [categoryId]);
@@ -78,6 +79,7 @@ export const useSubcategories = (categoryId?: string) => {
       await fetchSubcategories();
     }
   };
+  
 
   return {
     subcategories,

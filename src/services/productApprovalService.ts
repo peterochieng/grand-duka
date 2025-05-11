@@ -15,8 +15,9 @@ export const getProductsForApproval = async (): Promise<ProductWithApproval[]> =
     const { data: productRows, error } = await supabase
       .from('products')
       .select('*')
-      .eq('approval_status', 'pending')
+      .eq('approval_status', 'pending_review')
       .order('created_at', { ascending: false });
+
 
     if (error) {
       console.error('Error fetching products for approval:', error);

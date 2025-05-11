@@ -29,10 +29,10 @@ export const ProductsTab = () => {
             <FileCheck className="h-4 w-4" />
             Approvals
           </TabsTrigger>
-          <TabsTrigger value="category-settings" className="flex items-center gap-1">
+          {/* <TabsTrigger value="category-settings" className="flex items-center gap-1">
             <Settings className="h-4 w-4" />
             Category Settings
-          </TabsTrigger>
+          </TabsTrigger> */}
           <TabsTrigger value="all-products" className="flex items-center gap-1">
             <FileDigit className="h-4 w-4" />
             All Products
