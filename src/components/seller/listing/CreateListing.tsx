@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
@@ -65,6 +65,23 @@ const CreateListing = ({ existingProduct, isRelisting }: CreateListingProps) => 
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
   const [showImportModal, setShowImportModal] = useState<boolean>(false);
   const [showTemplateManager, setShowTemplateManager] = useState<boolean>(false);
+
+  // New state to capture additional fields defined by the template.
+  const [templateFieldValues, setTemplateFieldValues] = useState<Record<string, any>>({});
+
+  // When a template is selected, initialize template fields (if the template has a 'fields' attribute)
+  useEffect(() => {
+    if (selectedTemplate && selectedTemplate.fields) {
+      // Initialize each field with an empty value.
+      const initialValues: Record<string, any> = {};
+      selectedTemplate.fields.forEach((field: any) => {
+        initialValues[field.label] = '';
+      });
+      setTemplateFieldValues(initialValues);
+    } else {
+      setTemplateFieldValues({});
+    }
+  }, [selectedTemplate]);
 
   const [basicInfo, setBasicInfo] = useState({
     title: '',
@@ -161,7 +178,9 @@ const CreateListing = ({ existingProduct, isRelisting }: CreateListingProps) => 
       listingtypes: listingTypes,
       template: selectedTemplate
         ? { id: selectedTemplate.id, name: selectedTemplate.name, type: selectedTemplate.type }
-        : null
+        : null,
+      // Include dynamic template field values
+      template_fields: templateFieldValues
     };
 
     // Upload each selected image and collect their public URLs
@@ -213,6 +232,14 @@ const CreateListing = ({ existingProduct, isRelisting }: CreateListingProps) => 
       console.log("New listing created:", data);
       navigate("/retail/seller-dashboard/inventory");
     }
+  };
+
+  // Handler to update a dynamic template field value
+  const handleTemplateFieldChange = (label: string, value: string) => {
+    setTemplateFieldValues(prev => ({
+      ...prev,
+      [label]: value
+    }));
   };
 
   const showListingForm = !showTemplateManager && !showImportModal;
@@ -327,6 +354,24 @@ const CreateListing = ({ existingProduct, isRelisting }: CreateListingProps) => 
           </div>
         )}
 
+        {/* Dynamic Template Fields */}
+        {selectedTemplate && selectedTemplate.fields && (
+          <div className="mb-4">
+            <label className="block text-sm font-medium mb-1">Template Fields</label>
+            {selectedTemplate.fields.map((field: any, index: number) => (
+              <div key={index} className="mb-2">
+                <label className="block text-xs font-medium mb-1">{field.label}</label>
+                <input
+                  type={field.type}
+                  value={templateFieldValues[field.label] || ''}
+                  onChange={(e) => handleTemplateFieldChange(field.label, e.target.value)}
+                  className="border rounded p-2 w-full"
+                />
+              </div>
+            ))}
+          </div>
+        )}
+
         {/* New Product Image Field: allow multiple image selection */}
         <div className="mb-4">
           <label className="block text-sm font-medium mb-1">Product Images</label>
@@ -410,4 +455,4 @@ const CreateListing = ({ existingProduct, isRelisting }: CreateListingProps) => 
   );
 };
 
-export default CreateListing; 
+export default CreateListing;
