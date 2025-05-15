@@ -1,36 +1,98 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+import { useCategories } from '@/hooks/useCategories';
+import { useSubcategories } from '@/hooks/useSubcategories';
+// New hook that gets all subcategories regardless of selected category.
+import { useAllSubcategories } from '@/hooks/useAllSubcategories';
+
+type TemplateField = {
+  label: string;
+  type: string;
+};
 
 export const AdminSubcategoryTemplateManager = () => {
-  // State for template form fields
+  // State for the template form.
   const [templateName, setTemplateName] = useState('');
-  const [templateFields, setTemplateFields] = useState(''); // for simplicity, you can type JSON here
+  // Local array for template fields.
+  const [fields, setFields] = useState<TemplateField[]>([]);
+  // State for category and subcategory selection.
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string>('');
+  const [selectedSubcategoryId, setSelectedSubcategoryId] = useState<string>('');
   const [loading, setLoading] = useState(false);
   const [templates, setTemplates] = useState<any[]>([]);
+  // State for tracking editing mode.
+  const [editingTemplate, setEditingTemplate] = useState<any>(null);
 
+  // Fetch categories and subcategories for the dropdown.
+  const { categories, loading: catLoading } = useCategories();
+  const { subcategories, loading: subcatLoading } = useSubcategories(selectedCategoryId);
+  // Use the hook that retrieves all subcategories (for cross-referencing).
+  const { subcategories: allSubcategories, loading: allSubsLoading } = useAllSubcategories();
+
+  // Helper: look up the subcategory name from the complete list.
+  const getSubcategoryName = (id: string) => {
+    const found = allSubcategories.find(sub => sub.id === id);
+    return found ? found.name : id;
+  };
+
+  // Field types available.
+  const fieldTypes = ['text', 'number', 'date', 'boolean', 'select', 'image'];
+
+  // Helper functions for dynamic fields.
+  const addField = () => {
+    setFields(prev => [...prev, { label: '', type: 'text' }]);
+  };
+
+  const removeField = (index: number) => {
+    setFields(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const updateField = (index: number, key: keyof TemplateField, value: string) => {
+    setFields(prev =>
+      prev.map((field, i) => (i === index ? { ...field, [key]: value } : field))
+    );
+  };
+
+  // Delete a template.
+  const handleDeleteTemplate = async (templateId: string) => {
+    setLoading(true);
+    const { error } = await supabase
+      .from('subcategory_templates' as any)
+      .delete()
+      .eq('id', templateId);
+    if (error) {
+      console.error('Error deleting template:', error);
+      toast.error('Failed to delete template');
+    } else {
+      toast.success('Template deleted successfully');
+      fetchTemplates();
+    }
+    setLoading(false);
+  };
+
+  // Toggle active status.
   const handleToggleActive = async (templateId: string, currentActive: boolean) => {
     setLoading(true);
     const { error } = await supabase
       .from('subcategory_templates' as any)
       .update({ is_active: !currentActive })
       .eq('id', templateId);
-      
     if (error) {
       console.error('Error updating template status:', error);
       toast.error('Failed to update template status');
     } else {
       toast.success('Template status updated successfully');
-      fetchTemplates(); // refresh list
+      fetchTemplates();
     }
     setLoading(false);
   };
 
-  // Fetch existing templates from Supabase
+  // Fetch existing templates.
   const fetchTemplates = async () => {
     setLoading(true);
     const { data, error } = await supabase
@@ -50,47 +112,92 @@ export const AdminSubcategoryTemplateManager = () => {
     fetchTemplates();
   }, []);
 
+  // When editing is triggered, populate the form.
+  const handleEditTemplate = (template: any) => {
+    setEditingTemplate(template);
+    setTemplateName(template.name);
+    setFields(template.fields || []);
+    setSelectedCategoryId(template.category_id || '');
+    setSelectedSubcategoryId(template.subcategory_id || '');
+  };
+
+  // Cancel edit and reset form.
+  const cancelEdit = () => {
+    setEditingTemplate(null);
+    setTemplateName('');
+    setFields([]);
+    setSelectedCategoryId('');
+    setSelectedSubcategoryId('');
+  };
+
+  // Handle form submission to create or update a template.
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!templateName.trim() || !templateFields.trim()) {
-      toast.error('Please provide both template name and fields JSON');
+    if (!templateName.trim() || fields.length === 0) {
+      toast.error('Please provide a template name and at least one field');
       return;
     }
     setLoading(true);
     try {
-      const fieldsJson = JSON.parse(templateFields); // ensure valid JSON
-      const { data, error } = await supabase
-        .from('subcategory_templates' as any)
-        .insert([{
-          name: templateName,
-          fields: fieldsJson,
-          is_active: false  // default inactive, can be toggled later
-        }]);
-      if (error) {
-        console.error('Error creating template:', error);
-        toast.error('Failed to create template');
+      if (editingTemplate) {
+        const { error } = await supabase
+          .from('subcategory_templates' as any)
+          .update({
+            name: templateName,
+            fields,
+            category_id: selectedCategoryId || null,
+            subcategory_id: selectedSubcategoryId || null,
+          })
+          .eq('id', editingTemplate.id);
+        if (error) {
+          console.error('Error updating template:', error);
+          toast.error('Failed to update template');
+        } else {
+          toast.success('Template updated successfully');
+          cancelEdit();
+          fetchTemplates();
+        }
       } else {
-        toast.success('Template created successfully');
-        setTemplateName('');
-        setTemplateFields('');
-        fetchTemplates();
+        const { error } = await supabase
+          .from('subcategory_templates' as any)
+          .insert([
+            {
+              name: templateName,
+              fields,
+              is_active: false, // default inactive
+              category_id: selectedCategoryId || null,
+              subcategory_id: selectedSubcategoryId || null,
+            }
+          ]);
+        if (error) {
+          console.error('Error creating template:', error);
+          toast.error('Failed to create template');
+        } else {
+          toast.success('Template created successfully');
+          setTemplateName('');
+          setFields([]);
+          setSelectedCategoryId('');
+          setSelectedSubcategoryId('');
+          fetchTemplates();
+        }
       }
     } catch (err) {
-      console.error('Invalid JSON:', err);
-      toast.error('Please check the JSON format of template fields');
+      console.error('Error:', err);
+      toast.error('An error occurred while processing the template');
     }
     setLoading(false);
   };
 
-  
-
   return (
     <Card className="mb-6">
       <CardHeader>
-        <CardTitle>Define Subcategory Template</CardTitle>
+        <CardTitle>
+          {editingTemplate ? 'Edit Subcategory Template' : 'Define Subcategory Template'}
+        </CardTitle>
       </CardHeader>
       <form onSubmit={handleSubmit}>
         <CardContent className="space-y-4">
+          {/* Template Name */}
           <div>
             <label htmlFor="templateName" className="block text-sm font-medium mb-1">
               Template Name
@@ -103,53 +210,169 @@ export const AdminSubcategoryTemplateManager = () => {
               placeholder="e.g. Electronics Listing Template"
             />
           </div>
+          {/* Category Selection */}
           <div>
-            <label htmlFor="templateFields" className="block text-sm font-medium mb-1">
-              Template Fields (in JSON)
-            </label>
-            <Textarea
-              id="templateFields"
-              value={templateFields}
-              onChange={(e) => setTemplateFields(e.target.value)}
-              placeholder='e.g. [{"label": "Model", "type": "text"}, {"label": "Warranty", "type": "number"}]'
-              rows={4}
-            />
+            <label className="block text-sm font-medium mb-1">Select Category (Required)</label>
+            {catLoading ? (
+              <div className="h-10 bg-gray-200 animate-pulse rounded" />
+            ) : (
+              <select
+                value={selectedCategoryId}
+                onChange={(e) => {
+                  setSelectedCategoryId(e.target.value);
+                  setSelectedSubcategoryId('');
+                }}
+                className="border rounded p-2 w-full"
+                required
+              >
+                <option value="">-- Select a category for the template --</option>
+                {categories.map((cat: any) => (
+                  <option key={cat.id} value={cat.id}>
+                    {cat.name}
+                  </option>
+                ))}
+              </select>
+            )}
+          </div>
+          {/* Subcategory Selection */}
+          {selectedCategoryId && (
+            <div>
+              <label className="block text-sm font-medium mb-1">Select Subcategory (Optional)</label>
+              {subcatLoading ? (
+                <div className="h-10 bg-gray-200 animate-pulse rounded" />
+              ) : (
+                <select
+                  value={selectedSubcategoryId}
+                  onChange={(e) => setSelectedSubcategoryId(e.target.value)}
+                  className="border rounded p-2 w-full"
+                >
+                  <option value="">-- Applies to all subcategories in this category --</option>
+                  {subcategories.map((sub: any) => (
+                    <option key={sub.id} value={sub.id}>
+                      {sub.name}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
+          )}
+          {/* Template Fields Dynamic List */}
+          <div>
+            <label className="block text-sm font-medium mb-1">Template Fields</label>
+            {fields.map((field, index) => (
+              <div key={index} className="flex space-x-2 items-center mb-2">
+                <Input
+                  type="text"
+                  value={field.label}
+                  onChange={(e) => updateField(index, 'label', e.target.value)}
+                  placeholder="Field Label"
+                  className="w-1/2"
+                />
+                <Select onValueChange={(value) => updateField(index, 'type', value)} value={field.type}>
+                  <SelectTrigger className="w-1/3">
+                    <span>{field.type}</span>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {fieldTypes.map(ft => (
+                      <SelectItem key={ft} value={ft}>
+                        {ft}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button type="button" variant="outline" size="sm" onClick={() => removeField(index)}>
+                  Remove
+                </Button>
+              </div>
+            ))}
+            <Button type="button" variant="outline" size="sm" onClick={addField}>
+              Add Field
+            </Button>
           </div>
         </CardContent>
-        <CardFooter>
+        <CardFooter className="flex items-center space-x-2">
           <Button type="submit" disabled={loading}>
-            {loading ? 'Saving...' : 'Save Template'}
+            {loading
+              ? editingTemplate
+                ? 'Updating...'
+                : 'Saving...'
+              : editingTemplate
+              ? 'Update Template'
+              : 'Save Template'}
           </Button>
+          {editingTemplate && (
+            <Button type="button" variant="outline" onClick={cancelEdit}>
+              Cancel Edit
+            </Button>
+          )}
         </CardFooter>
       </form>
-      <CardContent>
+      {/* Redesigned Existing Templates Section */}
+      <CardContent className="mt-4">
         <h3 className="font-semibold mb-2">Existing Templates</h3>
         {loading ? (
-  <p>Loading...</p>
-) : templates.length === 0 ? (
-  <p>No templates defined yet.</p>
-) : (
-  <ul className="list-disc ml-6">
-    {templates.map(template => (
-      <li key={template.id} className="flex items-center justify-between">
-        <div>
-          <span className="font-medium">{template.name}</span> – Active: {template.is_active ? 'Yes' : 'No'}
-        </div>
-        <div>
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={() => handleToggleActive(template.id, template.is_active)}
-          >
-            {template.is_active ? 'Unpublish' : 'Publish'}
-          </Button>
-        </div>
-      </li>
-    ))}
-  </ul>
-)}
+          <p>Loading...</p>
+        ) : templates.length === 0 ? (
+          <p>No templates defined yet.</p>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {templates.map(template => {
+              const catName = template.category_id
+                ? categories.find(cat => cat.id === template.category_id)?.name || template.category_id
+                : '';
+              const subcatName = template.subcategory_id
+                ? getSubcategoryName(template.subcategory_id)
+                : '';
+              return (
+                <Card key={template.id} className="p-4 border rounded-md shadow-sm">
+                  <div className="flex items-center justify-between mb-2">
+                    <h4 className="text-lg font-semibold">{template.name}</h4>
+                    <div className="flex items-center gap-1">
+                      <span className={`w-2 h-2 rounded-full ${template.is_active ? 'bg-green-500' : 'bg-red-500'}`}></span>
+                      <span className="text-xs text-gray-500">
+                        {template.is_active ? 'Active' : 'Inactive'}
+                      </span>
+                    </div>
+                  </div>
+                  <p className="text-sm text-gray-600">
+                    {catName && `Category: ${catName}`}
+                    {subcatName && ` | Subcategory: ${subcatName}`}
+                  </p>
+                  <p className="text-sm text-gray-600 mb-3">Fields: {template.fields.length}</p>
+                  <div className="flex space-x-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleToggleActive(template.id, template.is_active)}
+                    >
+                      {template.is_active ? 'Unpublish' : 'Publish'}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleEditTemplate(template)}
+                    >
+                      Edit
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="sm"
+                      onClick={() => handleDeleteTemplate(template.id)}
+                    >
+                      Delete
+                    </Button>
+                  </div>
+                </Card>
+              );
+            })}
+          </div>
+        )}
       </CardContent>
     </Card>
   );
 };
 
+export default AdminSubcategoryTemplateManager;

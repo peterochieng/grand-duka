@@ -194,11 +194,33 @@ export const getSellerListings = async (sellerId: string): Promise<Product[]> =>
     .from('products')
     .select('*')
     .eq('seller_id', sellerId);
+    console.log(data);
   if (error) {
     console.error('Error fetching seller listings:', error);
     return [];
   }
   return data ? data.map((row) => convertProductRowToProduct(row)) : [];
+};
+
+export const getSellerListingsInventory = async (sellerId: string): Promise<Product[]> => {
+  const { data, error } = await supabase
+    .from('products')
+    .select('*')
+    .eq('seller_id', sellerId);
+  console.log(data);
+  if (error) {
+    console.error('Error fetching seller listings:', error);
+    return [];
+  }
+  return data
+    ? data.map((row) => {
+        const product = convertProductRowToProduct(row);
+        // Preserve template and template_fields from the original row
+        product.template = (row as any).template;
+        (product as any).template_fields = (row as any).template_fields;
+        return product;
+      })
+    : [];
 };
 
 export const togglePublishStatus = async (productId: string, publish: boolean): Promise<boolean> => {

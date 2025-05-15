@@ -23,6 +23,7 @@ import { AuthGuard } from '@/components/auth/AuthGuard';
 import SearchResults from './components/SearchResults';
 import ProductDetail from './pages/ProductDetail';
 import CategoryPage from './pages/CategoryPage';
+import SellerInventory from './components/seller/SellerInventory';
 
 function App() {
   return (
@@ -97,6 +98,13 @@ function App() {
           >
             <Route path="listings/edit/:id" element={<EditListing />} />
           </Route>
+
+          <Route
+            path="/retail/seller-inventory"
+            element={
+                <SellerInventory />
+            }
+          />
 
           <Route
             path="/retail/shop-dashboard"
