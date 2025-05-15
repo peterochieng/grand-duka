@@ -434,7 +434,7 @@ const CreateListing = ({ existingProduct, isRelisting }: CreateListingProps) => 
         {/* Dynamic Template Fields */}
         {selectedTemplate && selectedTemplate.fields && (
           <div className="mb-4">
-            <label className="block text-sm font-medium mb-1">Template Fields</label>
+            <label className="block text-sm font-medium mb-1">Template Fields </label>
             {selectedTemplate.fields.map((field: any, index: number) => (
               <div key={index} className="mb-2">
                 <label className="block text-xs font-medium mb-1">{field.label}</label>
