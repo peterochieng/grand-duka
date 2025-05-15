@@ -28,10 +28,9 @@ const CreateListing = ({ existingProduct, isRelisting }: CreateListingProps) => 
 
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | undefined>(undefined);
   const [selectedSubcategoryId, setSelectedSubcategoryId] = useState<string | undefined>(undefined);
-
   const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
-
+  
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       const filesArray = Array.from(e.target.files);
@@ -434,16 +433,31 @@ const CreateListing = ({ existingProduct, isRelisting }: CreateListingProps) => 
         {/* Dynamic Template Fields */}
         {selectedTemplate && selectedTemplate.fields && (
           <div className="mb-4">
-            <label className="block text-sm font-medium mb-1">Template Fields </label>
+            <label className="block text-sm font-medium mb-1">Template Fields</label>
             {selectedTemplate.fields.map((field: any, index: number) => (
               <div key={index} className="mb-2">
                 <label className="block text-xs font-medium mb-1">{field.label}</label>
-                <input
-                  type={field.type}
-                  value={templateFieldValues[field.label] || ''}
-                  onChange={(e) => handleTemplateFieldChange(field.label, e.target.value)}
-                  className="border rounded p-2 w-full"
-                />
+                {field.type === 'dropdown' && field.options ? (
+                  <select
+                    value={templateFieldValues[field.label] || ''}
+                    onChange={(e) => handleTemplateFieldChange(field.label, e.target.value)}
+                    className="border rounded p-2 w-full"
+                  >
+                    <option value="">-- Select --</option>
+                    {field.options.split(',').map((option: string) => (
+                      <option key={option.trim()} value={option.trim()}>
+                        {option.trim()}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <input
+                    type={field.type}
+                    value={templateFieldValues[field.label] || ''}
+                    onChange={(e) => handleTemplateFieldChange(field.label, e.target.value)}
+                    className="border rounded p-2 w-full"
+                  />
+                )}
               </div>
             ))}
           </div>

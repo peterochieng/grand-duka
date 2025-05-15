@@ -7,12 +7,12 @@ import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import { useCategories } from '@/hooks/useCategories';
 import { useSubcategories } from '@/hooks/useSubcategories';
-// New hook that gets all subcategories regardless of selected category.
 import { useAllSubcategories } from '@/hooks/useAllSubcategories';
 
 type TemplateField = {
   label: string;
   type: string;
+  options?: string;
 };
 
 export const AdminSubcategoryTemplateManager = () => {
@@ -31,17 +31,17 @@ export const AdminSubcategoryTemplateManager = () => {
   // Fetch categories and subcategories for the dropdown.
   const { categories, loading: catLoading } = useCategories();
   const { subcategories, loading: subcatLoading } = useSubcategories(selectedCategoryId);
-  // Use the hook that retrieves all subcategories (for cross-referencing).
+  // Use hook to retrieve all subcategories (for cross-referencing).
   const { subcategories: allSubcategories, loading: allSubsLoading } = useAllSubcategories();
 
-  // Helper: look up the subcategory name from the complete list.
+  // Helper: look up subcategory name from the complete list.
   const getSubcategoryName = (id: string) => {
     const found = allSubcategories.find(sub => sub.id === id);
     return found ? found.name : id;
   };
 
-  // Field types available.
-  const fieldTypes = ['text', 'number', 'date', 'boolean', 'select', 'image'];
+  // Field types available (using 'dropdown' instead of 'select').
+  const fieldTypes = ['text', 'number', 'date', 'boolean', 'dropdown', 'image'];
 
   // Helper functions for dynamic fields.
   const addField = () => {
@@ -167,7 +167,7 @@ export const AdminSubcategoryTemplateManager = () => {
               is_active: false, // default inactive
               category_id: selectedCategoryId || null,
               subcategory_id: selectedSubcategoryId || null,
-            }
+            },
           ]);
         if (error) {
           console.error('Error creating template:', error);
@@ -260,29 +260,44 @@ export const AdminSubcategoryTemplateManager = () => {
           <div>
             <label className="block text-sm font-medium mb-1">Template Fields</label>
             {fields.map((field, index) => (
-              <div key={index} className="flex space-x-2 items-center mb-2">
-                <Input
-                  type="text"
-                  value={field.label}
-                  onChange={(e) => updateField(index, 'label', e.target.value)}
-                  placeholder="Field Label"
-                  className="w-1/2"
-                />
-                <Select onValueChange={(value) => updateField(index, 'type', value)} value={field.type}>
-                  <SelectTrigger className="w-1/3">
-                    <span>{field.type}</span>
-                  </SelectTrigger>
-                  <SelectContent>
-                    {fieldTypes.map(ft => (
-                      <SelectItem key={ft} value={ft}>
-                        {ft}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Button type="button" variant="outline" size="sm" onClick={() => removeField(index)}>
-                  Remove
-                </Button>
+              <div key={index} className="flex flex-col space-y-2 mb-2">
+                <div className="flex space-x-2 items-center">
+                  <Input
+                    type="text"
+                    value={field.label}
+                    onChange={(e) => updateField(index, 'label', e.target.value)}
+                    placeholder="Field Label"
+                    className="w-1/2"
+                  />
+                  <Select onValueChange={(value) => updateField(index, 'type', value)} value={field.type}>
+                    <SelectTrigger className="w-1/3">
+                      <span>{field.type}</span>
+                    </SelectTrigger>
+                    <SelectContent>
+                      {fieldTypes.map(ft => (
+                        <SelectItem key={ft} value={ft}>
+                          {ft}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Button type="button" variant="outline" size="sm" onClick={() => removeField(index)}>
+                    Remove
+                  </Button>
+                </div>
+                {field.type === 'dropdown' && (
+                  <div>
+                    <label className="block text-sm font-medium mb-1">
+                      Dropdown Options (comma separated)
+                    </label>
+                    <textarea
+                      className="border rounded p-2 w-full"
+                      placeholder="E.g., Car, Truck, Motorcycle, ..."
+                      value={field.options || ''}
+                      onChange={(e) => updateField(index, 'options', e.target.value)}
+                    />
+                  </div>
+                )}
               </div>
             ))}
             <Button type="button" variant="outline" size="sm" onClick={addField}>
@@ -307,7 +322,7 @@ export const AdminSubcategoryTemplateManager = () => {
           )}
         </CardFooter>
       </form>
-      {/* Redesigned Existing Templates Section */}
+      {/* Redesigned Existing Templates Section as a Table */}
       <CardContent className="mt-4">
         <h3 className="font-semibold mb-2">Existing Templates</h3>
         {loading ? (
@@ -315,59 +330,70 @@ export const AdminSubcategoryTemplateManager = () => {
         ) : templates.length === 0 ? (
           <p>No templates defined yet.</p>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {templates.map(template => {
-              const catName = template.category_id
-                ? categories.find(cat => cat.id === template.category_id)?.name || template.category_id
-                : '';
-              const subcatName = template.subcategory_id
-                ? getSubcategoryName(template.subcategory_id)
-                : '';
-              return (
-                <Card key={template.id} className="p-4 border rounded-md shadow-sm">
-                  <div className="flex items-center justify-between mb-2">
-                    <h4 className="text-lg font-semibold">{template.name}</h4>
-                    <div className="flex items-center gap-1">
-                      <span className={`w-2 h-2 rounded-full ${template.is_active ? 'bg-green-500' : 'bg-red-500'}`}></span>
-                      <span className="text-xs text-gray-500">
-                        {template.is_active ? 'Active' : 'Inactive'}
-                      </span>
-                    </div>
-                  </div>
-                  <p className="text-sm text-gray-600">
-                    {catName && `Category: ${catName}`}
-                    {subcatName && ` | Subcategory: ${subcatName}`}
-                  </p>
-                  <p className="text-sm text-gray-600 mb-3">Fields: {template.fields.length}</p>
-                  <div className="flex space-x-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleToggleActive(template.id, template.is_active)}
-                    >
-                      {template.is_active ? 'Unpublish' : 'Publish'}
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleEditTemplate(template)}
-                    >
-                      Edit
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="destructive"
-                      size="sm"
-                      onClick={() => handleDeleteTemplate(template.id)}
-                    >
-                      Delete
-                    </Button>
-                  </div>
-                </Card>
-              );
-            })}
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">Name</th>
+                  <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">Category</th>
+                  <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">Subcategory</th>
+                  <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">Fields</th>
+                  <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">Status</th>
+                  <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {templates.map(template => {
+                  const catName = template.category_id
+                    ? categories.find(cat => cat.id === template.category_id)?.name || template.category_id
+                    : '';
+                  const subcatName = template.subcategory_id ? getSubcategoryName(template.subcategory_id) : '';
+                  return (
+                    <tr key={template.id}>
+                      <td className="px-4 py-2 text-sm text-gray-900">{template.name}</td>
+                      <td className="px-4 py-2 text-sm text-gray-900">{catName}</td>
+                      <td className="px-4 py-2 text-sm text-gray-900">{subcatName}</td>
+                      <td className="px-4 py-2 text-sm text-gray-900">{template.fields ? template.fields.length : 0}</td>
+                      <td className="px-4 py-2 text-sm text-gray-900">
+                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                          template.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                        }`}>
+                          {template.is_active ? 'Active' : 'Inactive'}
+                        </span>
+                      </td>
+                      <td className="px-4 py-2 text-sm">
+                        <div className="flex space-x-2">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleToggleActive(template.id, template.is_active)}
+                          >
+                            {template.is_active ? 'Unpublish' : 'Publish'}
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleEditTemplate(template)}
+                          >
+                            Edit
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="destructive"
+                            size="sm"
+                            onClick={() => handleDeleteTemplate(template.id)}
+                          >
+                            Delete
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         )}
       </CardContent>

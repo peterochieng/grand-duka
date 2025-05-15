@@ -1,15 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { getSellerListings, getSellerListingsInventory } from '@/services/productApprovalService';
+import { useCategories } from '@/hooks/useCategories';
+import { getSellerListingsInventory } from '@/services/productApprovalService';
 import { toast } from 'sonner';
 import { Product } from '@/lib/types';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { supabase } from '@/integrations/supabase/client';
 import { Footer } from '../Footer';
 import { SiteHeader } from '../SiteHeader';
-import { useCategories } from '@/hooks/useCategories';
 
 const SellerInventory: React.FC = () => {
   const { user } = useCurrentUser();
@@ -47,74 +45,65 @@ const SellerInventory: React.FC = () => {
   return (
     <div className="max-w-6xl mx-auto p-6 space-y-6">
       <SiteHeader />
-      <Card className="border-none rounded-lg p-4">
-        <CardHeader>
-          <CardTitle className="text-2xl font-semibold">Your Listings Inventory</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {loading ? (
-            <p>Loading your listings...</p>
-          ) : listings.length === 0 ? (
-            <p>You have no listings.</p>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {listings?.map((listing) => {
-                console.log("Listing:", listing);
-                // Lookup the category name using the category id
-                const categoryName = categories?.find(cat => cat.id === listing.category)?.name || listing.category;
+      <div className="overflow-x-auto">
+        {loading ? (
+          <p>Loading your listings...</p>
+        ) : listings.length === 0 ? (
+          <p>You have no listings.</p>
+        ) : (
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-sm font-medium text-gray-700">Title</th>
+                <th className="px-6 py-3 text-left text-sm font-medium text-gray-700">Category</th>
+                <th className="px-6 py-3 text-left text-sm font-medium text-gray-700">Condition</th>
+                <th className="px-6 py-3 text-left text-sm font-medium text-gray-700">Price</th>
+                <th className="px-6 py-3 text-left text-sm font-medium text-gray-700">Template</th>
+                <th className="px-6 py-3 text-left text-sm font-medium text-gray-700">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {listings.map((listing) => {
+                // Lookup the category name using the category id.
+                const categoryName =
+                  categories?.find((cat) => cat.id === listing.category)?.name || listing.category || "Uncategorized";
                 return (
-                  <Card key={listing.id} className="border border-gray-200 rounded-lg p-4 hover:shadow-2xl transition-shadow">
-                    <div className="flex flex-col space-y-3">
-                      <h3 className="text-xl font-bold">{listing.title || "-"}</h3>
-                      <p className="text-gray-600">
-                        <strong>Category: </strong>{categoryName}
-                      </p>
-                      <p className="text-gray-600">
-                        <strong>Condition: </strong>{listing.condition}
-                      </p>
-                      <p className="text-gray-800 font-semibold">
-                        {listing.currency} {Number(listing.price).toLocaleString()}
-                      </p>
-                      <div>
-  <strong>Template:</strong>{" "}
-  {listing?.template?.name ?? "None used"}
-</div>
-                      {listing.template_fields && (
-                        <div className="space-y-1 text-sm text-gray-500">
-                          {Object.entries(listing.template_fields).map(([key, value]) => (
-                            <div key={key}>
-                              <span className="font-semibold">{key}:</span> {value}
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex justify-end space-x-2 mt-4">
-                      <Link to={`/retail/seller-dashboard/listings/edit/${listing.id}`}>
-                        <Button variant="outline" size="sm">
-                          Edit
-                        </Button>
+                  <tr key={listing.id}>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{listing.title || "-"}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{categoryName}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{listing.condition}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {listing.currency} {Number(listing.price).toLocaleString()}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {listing?.template?.name ?? "None used"}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                      <Link
+                        to={`/retail/seller-dashboard/listings/edit/${listing.id}`}
+                        className="text-indigo-600 hover:text-indigo-900 mr-4"
+                      >
+                        Edit
                       </Link>
-                      <Button
-                        variant="destructive"
-                        size="sm"
+                      <button
                         onClick={() => handleDeleteListing(listing.id)}
+                        className="text-red-600 hover:text-red-900"
                       >
                         Delete
-                      </Button>
-                    </div>
-                  </Card>
+                      </button>
+                    </td>
+                  </tr>
                 );
               })}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+            </tbody>
+          </table>
+        )}
+      </div>
       <div className="flex justify-center">
-        <Link to="/retail/seller-dashboard">
-          <Button variant="outline" size="sm">
+        <Link to="/retail/seller-dashboard" className="inline-block">
+          <button className="px-4 py-2 border border-gray-300 rounded-md text-sm text-gray-700 hover:bg-gray-100">
             Back to Dashboard
-          </Button>
+          </button>
         </Link>
       </div>
       <Footer />
