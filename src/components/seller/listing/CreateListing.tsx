@@ -233,12 +233,12 @@ const CreateListing = ({ existingProduct, isRelisting }: CreateListingProps) => 
           return;
         }
 
-        const { publicURL } = supabase
+        const { data: { publicUrl } } = supabase
           .storage
           .from('product-images')
           .getPublicUrl(filePath);
-        if (publicURL) {
-          imageUrls.push(publicURL);
+        if (publicUrl) {
+          imageUrls.push(publicUrl);
         }
       }
       newListing.images = imageUrls;
