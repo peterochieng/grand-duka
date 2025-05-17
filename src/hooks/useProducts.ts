@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Product } from '@/lib/types';
 import { getProducts, getProductById } from '@/services/productService';
@@ -14,9 +13,10 @@ export const useProducts = () => {
       try {
         setLoading(true);
         const result = await getProducts();
-        setProducts(result.products);
+        setProducts(result as any);
       } catch (err) {
         setError(err instanceof Error ? err : new Error('Failed to fetch products'));
+        console.log(err);
       } finally {
         setLoading(false);
       }
@@ -63,7 +63,7 @@ export const useProductsByCategory = (category: string) => {
     const fetchProducts = async () => {
       try {
         setLoading(true);
-        // Using the utility function from productQueries instead
+        // Using the utility function from productQueries
         const data = getProductsByCategoryUtil(category);
         setProducts(data);
       } catch (err) {

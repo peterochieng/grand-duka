@@ -26,11 +26,13 @@ const RetailFilterSidebar = ({
   products
 }: RetailFilterSidebarProps) => {
   const isMobile = useMediaQuery("(max-width: 768px)");
+
+  console.log(products);
   
   // Get all unique properties from products
-  const conditions = Array.from(new Set(products.map(p => p.condition)));
-  const locations = Array.from(new Set(products.map(p => p.location)));
-  const brands = Array.from(new Set(products.map(p => p.brand || ''))).filter(Boolean);
+  const conditions = Array.from(new Set(products?.map(p => p.condition)));
+  const locations = Array.from(new Set(products?.map(p => p.location)));
+  const brands = Array.from(new Set(products?.map(p => p.brand || ''))).filter(Boolean);
   
   // Get subcategories for selected category
   const subcategories = useMemo(() => {

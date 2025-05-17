@@ -8,10 +8,11 @@ import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { supabase } from '@/integrations/supabase/client';
 import { Footer } from '../Footer';
 import { SiteHeader } from '../SiteHeader';
+import { Button } from '@/components/ui/button';
 
 const SellerInventory: React.FC = () => {
   const { user } = useCurrentUser();
-  const { categories, loading: catLoading } = useCategories();
+  const { categories } = useCategories();
   const [listings, setListings] = useState<Product[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const navigate = useNavigate();
@@ -29,6 +30,36 @@ const SellerInventory: React.FC = () => {
   useEffect(() => {
     fetchListings();
   }, [user]);
+
+  // Toggle publish/unpublish unless the listing is under review or rejected.
+  const handleTogglePublish = async (listing: Product) => {
+    if (listing.approval_status === "pending_review" || listing.approval_status === "rejected") {
+      toast({
+        title: "Action Not Allowed",
+        description: "This listing cannot be published due to its current status.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    // Determine target status: if currently published → unpublish (set to 'pending'),
+    // else publish (set to 'published').
+    const publish = listing.approval_status !== "published";
+    const newStatus = publish ? "published" : "pending";
+
+    const { error } = await supabase
+      .from("products")
+      .update({ approval_status: newStatus, updated_at: new Date().toISOString() })
+      .eq("id", listing.id);
+
+    if (error) {
+      console.error("Error updating publish status:", error);
+      toast.error("Failed to update publication status.");
+    } else {
+      toast.success("Listing status updated.");
+      fetchListings();
+    }
+  };
 
   const handleDeleteListing = async (id: string) => {
     if (window.confirm("Are you sure you want to delete this listing?")) {
@@ -59,38 +90,87 @@ const SellerInventory: React.FC = () => {
                 <th className="px-6 py-3 text-left text-sm font-medium text-gray-700">Condition</th>
                 <th className="px-6 py-3 text-left text-sm font-medium text-gray-700">Price</th>
                 <th className="px-6 py-3 text-left text-sm font-medium text-gray-700">Template</th>
+                <th className="px-6 py-3 text-left text-sm font-medium text-gray-700">Status</th>
                 <th className="px-6 py-3 text-left text-sm font-medium text-gray-700">Actions</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {listings.map((listing) => {
-                // Lookup the category name using the category id.
                 const categoryName =
-                  categories?.find((cat) => cat.id === listing.category)?.name || listing.category || "Uncategorized";
+                  categories?.find((cat) => cat.id === listing.category)?.name ||
+                  listing.category ||
+                  "Uncategorized";
                 return (
                   <tr key={listing.id}>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{listing.title || "-"}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{categoryName}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{listing.condition}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {listing.title || "-"}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {categoryName}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {listing.condition}
+                    </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {listing.currency} {Number(listing.price).toLocaleString()}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {listing?.template?.name ?? "None used"}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <Link
-                        to={`/retail/seller-dashboard/listings/edit/${listing.id}`}
-                        className="text-indigo-600 hover:text-indigo-900 mr-4"
-                      >
-                        Edit
-                      </Link>
-                      <button
-                        onClick={() => handleDeleteListing(listing.id)}
-                        className="text-red-600 hover:text-red-900"
-                      >
-                        Delete
-                      </button>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {listing.approval_status}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
+                      {listing.approval_status === "pending_review" ? (
+                        <>
+                          <Button variant="outline" disabled size="sm">
+                            Edit
+                          </Button>
+                          <Button variant="outline" disabled size="sm">
+                            Delete
+                          </Button>
+                        </>
+                      ) : listing.approval_status === "rejected" ? (
+                        <>
+                          <Button variant="outline" disabled size="sm">
+                            Edit
+                          </Button>
+                          <button
+                            onClick={() => handleDeleteListing(listing.id)}
+                            className="text-red-600 hover:text-red-900 mr-4"
+                          >
+                            Delete
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <Link
+                            to={`/retail/seller-dashboard/listings/edit/${listing.id}`}
+                            className="text-indigo-600 hover:text-indigo-900 mr-4"
+                          >
+                            Edit
+                          </Link>
+                          <button
+                            onClick={() => handleDeleteListing(listing.id)}
+                            className="text-red-600 hover:text-red-900 mr-4"
+                          >
+                            Delete
+                          </button>
+                        </>
+                      )}
+                      {(listing.approval_status === "pending_review" || listing.approval_status === "rejected") ? (
+                        <Button variant="outline" disabled size="sm">
+                          {listing.approval_status === "pending_review" ? "Pending Review" : "Rejected"}
+                        </Button>
+                      ) : (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleTogglePublish(listing)}
+                        >
+                          {listing.approval_status === "published" ? "Unpublish" : "Publish"}
+                        </Button>
+                      )}
                     </td>
                   </tr>
                 );

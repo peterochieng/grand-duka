@@ -1,6 +1,11 @@
-
 import React from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
@@ -24,7 +29,17 @@ interface ListingOptionsFormProps {
   setBestOfferEnabled: (enabled: boolean) => void;
   minimumOffer: number;
   setMinimumOffer: (offer: number) => void;
+  currency: string;
+  setCurrency: (currency: string) => void;
 }
+
+// Helper to render a label with an asterisk for required fields.
+const renderLabel = (label: string, required?: boolean) => (
+  <span>
+    {label}
+    {required && <span className="text-red-500 ml-1">*</span>}
+  </span>
+);
 
 const ListingOptionsForm: React.FC<ListingOptionsFormProps> = ({
   listingType,
@@ -40,7 +55,9 @@ const ListingOptionsForm: React.FC<ListingOptionsFormProps> = ({
   bestOfferEnabled,
   setBestOfferEnabled,
   minimumOffer,
-  setMinimumOffer
+  setMinimumOffer,
+  currency,
+  setCurrency,
 }) => {
   return (
     <Card>
@@ -53,7 +70,7 @@ const ListingOptionsForm: React.FC<ListingOptionsFormProps> = ({
           <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="auction">Auction</TabsTrigger>
             <TabsTrigger value="fixed">Fixed Price</TabsTrigger>
-            <TabsTrigger value="both">Auction + Fixed Price</TabsTrigger>
+            <TabsTrigger value="both">Auction + Fixed Price + Best Offer</TabsTrigger>
           </TabsList>
           
           <TabsContent value="auction" className="space-y-4 mt-4">
@@ -75,6 +92,8 @@ const ListingOptionsForm: React.FC<ListingOptionsFormProps> = ({
               setBestOfferEnabled={setBestOfferEnabled}
               minimumOffer={minimumOffer}
               setMinimumOffer={setMinimumOffer}
+              currency={currency}
+              setCurrency={setCurrency}
             />
           </TabsContent>
           
@@ -88,6 +107,12 @@ const ListingOptionsForm: React.FC<ListingOptionsFormProps> = ({
               setAuctionDuration={setAuctionDuration}
               fixedPrice={fixedPrice}
               setFixedPrice={setFixedPrice}
+              currency={currency}
+              setCurrency={setCurrency}
+              bestOfferEnabled={bestOfferEnabled}
+              setBestOfferEnabled={setBestOfferEnabled}
+              minimumOffer={minimumOffer}
+              setMinimumOffer={setMinimumOffer}
             />
           </TabsContent>
         </Tabs>
@@ -111,19 +136,20 @@ const AuctionSettings: React.FC<AuctionSettingsProps> = ({
   reservePrice,
   setReservePrice,
   auctionDuration,
-  setAuctionDuration
+  setAuctionDuration,
 }) => {
   return (
     <>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-2">
-          <Label htmlFor="starting-bid">Starting Bid</Label>
+          <Label htmlFor="starting-bid">
+            {renderLabel("Starting Bid", true)}
+          </Label>
           <Input 
             id="starting-bid" 
             type="number" 
             value={startingBid}
             onChange={(e) => setStartingBid(Number(e.target.value))}
-            required 
           />
         </div>
         
@@ -145,7 +171,9 @@ const AuctionSettings: React.FC<AuctionSettingsProps> = ({
       </div>
       
       <div className="space-y-2">
-        <Label htmlFor="auction-duration">Auction Duration</Label>
+        <Label htmlFor="auction-duration">
+          {renderLabel("Auction Duration", true)}
+        </Label>
         <Select defaultValue={auctionDuration} onValueChange={setAuctionDuration}>
           <SelectTrigger>
             <SelectValue placeholder="Select duration" />
@@ -168,6 +196,8 @@ interface FixedPriceSettingsProps {
   setBestOfferEnabled: (enabled: boolean) => void;
   minimumOffer: number;
   setMinimumOffer: (offer: number) => void;
+  currency: string;
+  setCurrency: (currency: string) => void;
 }
 
 const FixedPriceSettings: React.FC<FixedPriceSettingsProps> = ({
@@ -176,36 +206,52 @@ const FixedPriceSettings: React.FC<FixedPriceSettingsProps> = ({
   bestOfferEnabled,
   setBestOfferEnabled,
   minimumOffer,
-  setMinimumOffer
+  setMinimumOffer,
+  currency,
+  setCurrency,
 }) => {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
       <div className="space-y-2">
-        <Label htmlFor="fixed-price">Price</Label>
+        <Label htmlFor="currency-fixed">
+          {renderLabel("Currency", true)}
+        </Label>
+        <Input 
+          id="currency-fixed" 
+          type="text" 
+          value={currency}
+          onChange={(e) => setCurrency(e.target.value)}
+        />
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="fixed-price">
+          {renderLabel("Price", true)}
+        </Label>
         <Input 
           id="fixed-price" 
           type="number" 
           value={fixedPrice}
           onChange={(e) => setFixedPrice(Number(e.target.value))}
-          required 
         />
       </div>
       
-      <div className="space-y-4">
+      <div className="col-span-2 space-y-4">
         <div className="flex items-center space-x-2">
           <Switch 
-            id="best-offer" 
+            id="best-offer-fixed" 
             checked={bestOfferEnabled}
             onCheckedChange={setBestOfferEnabled}
           />
-          <Label htmlFor="best-offer">Accept Best Offers</Label>
+          <Label htmlFor="best-offer-fixed">Accept Best Offers</Label>
         </div>
         
         {bestOfferEnabled && (
           <div className="space-y-2">
-            <Label htmlFor="min-offer">Minimum Acceptable Offer</Label>
+            <Label htmlFor="min-offer-fixed">
+              {renderLabel("Minimum Acceptable Offer", true)}
+            </Label>
             <Input 
-              id="min-offer" 
+              id="min-offer-fixed" 
               type="number" 
               value={minimumOffer}
               onChange={(e) => setMinimumOffer(Number(e.target.value))}
@@ -226,6 +272,12 @@ interface CombinedListingSettingsProps {
   setAuctionDuration: (duration: string) => void;
   fixedPrice: number;
   setFixedPrice: (price: number) => void;
+  currency: string;
+  setCurrency: (currency: string) => void;
+  bestOfferEnabled: boolean;
+  setBestOfferEnabled: (enabled: boolean) => void;
+  minimumOffer: number;
+  setMinimumOffer: (offer: number) => void;
 }
 
 const CombinedListingSettings: React.FC<CombinedListingSettingsProps> = ({
@@ -236,7 +288,13 @@ const CombinedListingSettings: React.FC<CombinedListingSettingsProps> = ({
   auctionDuration,
   setAuctionDuration,
   fixedPrice,
-  setFixedPrice
+  setFixedPrice,
+  currency,
+  setCurrency,
+  bestOfferEnabled,
+  setBestOfferEnabled,
+  minimumOffer,
+  setMinimumOffer,
 }) => {
   return (
     <>
@@ -250,24 +308,38 @@ const CombinedListingSettings: React.FC<CombinedListingSettingsProps> = ({
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-6">
         <div className="space-y-2">
-          <Label htmlFor="starting-bid-combo">Starting Bid</Label>
+          <Label htmlFor="starting-bid-combo">
+            {renderLabel("Starting Bid", true)}
+          </Label>
           <Input 
             id="starting-bid-combo" 
             type="number" 
             value={startingBid}
             onChange={(e) => setStartingBid(Number(e.target.value))}
-            required 
           />
         </div>
         
         <div className="space-y-2">
-          <Label htmlFor="buy-now-price">Buy It Now Price</Label>
+          <Label htmlFor="buy-now-price">
+            {renderLabel("Buy It Now Price", true)}
+          </Label>
           <Input 
             id="buy-now-price" 
             type="number" 
             value={fixedPrice}
             onChange={(e) => setFixedPrice(Number(e.target.value))}
-            required 
+          />
+        </div>
+        
+        <div className="space-y-2">
+          <Label htmlFor="currency-combo">
+            {renderLabel("Currency", true)}
+          </Label>
+          <Input 
+            id="currency-combo" 
+            type="text" 
+            value={currency}
+            onChange={(e) => setCurrency(e.target.value)}
           />
         </div>
         
@@ -285,7 +357,9 @@ const CombinedListingSettings: React.FC<CombinedListingSettingsProps> = ({
         </div>
         
         <div className="space-y-2">
-          <Label htmlFor="auction-duration-combo">Auction Duration</Label>
+          <Label htmlFor="auction-duration-combo">
+            {renderLabel("Auction Duration", true)}
+          </Label>
           <Select defaultValue={auctionDuration} onValueChange={setAuctionDuration}>
             <SelectTrigger>
               <SelectValue placeholder="Select duration" />
@@ -297,6 +371,31 @@ const CombinedListingSettings: React.FC<CombinedListingSettingsProps> = ({
             </SelectContent>
           </Select>
         </div>
+      </div>
+      
+      <div className="space-y-4 mt-4">
+        <div className="flex items-center space-x-2">
+          <Switch 
+            id="best-offer-combo" 
+            checked={bestOfferEnabled}
+            onCheckedChange={setBestOfferEnabled}
+          />
+          <Label htmlFor="best-offer-combo">Accept Best Offers</Label>
+        </div>
+        
+        {bestOfferEnabled && (
+          <div className="space-y-2">
+            <Label htmlFor="min-offer-combo">
+              {renderLabel("Minimum Acceptable Offer", true)}
+            </Label>
+            <Input 
+              id="min-offer-combo" 
+              type="number" 
+              value={minimumOffer}
+              onChange={(e) => setMinimumOffer(Number(e.target.value))}
+            />
+          </div>
+        )}
       </div>
     </>
   );

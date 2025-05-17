@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { ProductCard } from '@/components/ProductCard';
 import { Card } from '@/components/ui/card';
@@ -10,6 +9,12 @@ interface RetailProductsDisplayProps {
 }
 
 const RetailProductsDisplay = ({ isLoading, displayProducts }: RetailProductsDisplayProps) => {
+  // Filter products to show only those with approval_status of 'published'
+  const publishedProducts = displayProducts.filter(
+    (product) => product.approval_status === 'published'
+  );
+  console.log(publishedProducts);
+  
   return (
     <>
       {isLoading ? (
@@ -18,9 +23,9 @@ const RetailProductsDisplay = ({ isLoading, displayProducts }: RetailProductsDis
             <Card key={i} className="h-[300px] animate-pulse bg-muted" />
           ))}
         </div>
-      ) : displayProducts.length > 0 ? (
+      ) : publishedProducts.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          {displayProducts.map((product) => (
+          {publishedProducts.map((product) => (
             <ProductCard key={product.id} product={product} />
           ))}
         </div>
@@ -28,7 +33,7 @@ const RetailProductsDisplay = ({ isLoading, displayProducts }: RetailProductsDis
         <div className="text-center py-16">
           <h3 className="text-xl font-medium">No products found</h3>
           <p className="text-muted-foreground mt-2">
-            Try adjusting your search or filter criteria
+            Try adjusting your search or filter criteria.
           </p>
         </div>
       )}

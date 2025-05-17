@@ -30,67 +30,21 @@ export const getProductById = (id: string): Product | undefined => {
   return undefined;
 };
 
-export const getProductsByCategory = (category: string): Product[] => {
-  // Normalize category name for case-insensitive comparison
-  const normalizedCategory = category.toLowerCase();
-  
-  // Special handling for Vehicle Parts category - map from different possible inputs
-  let searchCategory = category;
-  if (normalizedCategory === 'vehicles/parts' || normalizedCategory === 'vehicle parts') {
-    searchCategory = 'Vehicle Parts';
+export const getProductsByCategory = async (category: string): Promise<Product[]> => {
+  if (!category) return [];
+
+  const { data, error } = await supabase
+    .from('products')
+    .select('*')
+    .eq('category', category)
+    .order('created_at', { ascending: false });
+    console.log(data);
+
+  if (error) {
+    console.error('Error fetching products by category:', error);
+    return [];
   }
-  
-  // Filter regular products
-  const regularProducts = products.filter(product => 
-    product.category && product.category.toLowerCase() === normalizedCategory
-  );
-  
-  // Filter business listings
-  const businessProducts = productListings
-    .filter(listing => 
-      listing.category && 
-      listing.category.toLowerCase() === normalizedCategory && 
-      listing.status !== 'hidden' && 
-      listing.status !== 'rejected'
-    )
-    .map(convertListingToProduct);
-  
-  // Combine both sources
-  const combinedProducts = [...regularProducts, ...businessProducts];
-  
-  // If fewer than 3 products for important categories, generate mock ones
-  const missingCategories = [
-    'Real Estate', 
-    'Collectibles & Art', 
-    'Sporting Goods', 
-    'Toys & Hobbies', 
-    'Antiques', 
-    'Baby Essentials', 
-    'Specialty Services',
-    'Books, Movies & Music',
-    'Health & Beauty',
-    'Pet Supplies',
-    'Music',
-    'Vehicle Parts'  // Added Vehicle Parts to the list of categories with mock products
-  ];
-  
-  if (missingCategories.map(c => c.toLowerCase()).includes(normalizedCategory) || 
-      searchCategory === 'Vehicle Parts') {
-    
-    if (combinedProducts.length < 3) {
-      const mockCount = 3 - combinedProducts.length;
-      
-      // Check if we already have mock products for this category
-      if (!mockProductsCache[searchCategory]) {
-        // Generate and store new mock products
-        mockProductsCache[searchCategory] = generateMockProductsForCategory(searchCategory, mockCount);
-      }
-      
-      return [...combinedProducts, ...mockProductsCache[searchCategory]];
-    }
-  }
-  
-  return combinedProducts;
+  return data as any || [];
 };
 
 
@@ -100,7 +54,7 @@ export const fetchAllProducts = async (): Promise<Product[]> => {
     .from('products')
     .select('*')
     .order('created_at', { ascending: false }); // Adjust the order if needed
-
+ console.log(data);
   if (error) {
     console.error('Error fetching all products:', error);
     throw error;

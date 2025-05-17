@@ -1,194 +1,134 @@
-import React, { useState, useEffect } from 'react';
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Label } from "@/components/ui/label";
-import { Product } from "@/lib/types";
-import { categories } from "@/lib/categories";
+import React from 'react';
+import { Textarea } from '@/components/ui/textarea';
 import CategoryFieldsMapper from './category-fields/CategoryFieldsMapper';
+import { TemplateField } from '@/services/useBasicInfoTemplate';
 
 interface BasicInformationFormProps {
-  selectedProduct: Product | null;
-  presetCategory?: string;
-  onBasicInfoChange?: (info: {
-    title: string;
-    description: string;
-    price: string;
-    condition: string;
-    location: string;
-    currency: string;
-    subcategory: string;
-  }) => void;
+  selectedProduct: any;
+  presetCategory: string;
+  basicInfo: { [key: string]: string };
+  onBasicInfoChange: (fieldKey: string, value: string) => void;
+  // New optional prop for dynamic basic info template
+  basicInfoTemplate?: TemplateField[] | null;
 }
 
 const BasicInformationForm: React.FC<BasicInformationFormProps> = ({ 
   selectedProduct, 
   presetCategory,
-  onBasicInfoChange
+  basicInfo,
+  onBasicInfoChange,
+  basicInfoTemplate
 }) => {
-  const [title, setTitle] = useState(selectedProduct?.title || '');
-  const [description, setDescription] = useState(selectedProduct?.description || '');
-  const [price, setPrice] = useState(selectedProduct?.price?.toString() || '');
-  const [condition, setCondition] = useState(selectedProduct?.condition || 'New');
-  // Use presetCategory if provided; otherwise, default from selectedProduct or empty string.
-  const [category, setCategory] = useState(selectedProduct?.category || presetCategory || '');
-  const [subcategory, setSubcategory] = useState(selectedProduct?.subcategory || '');
-  const [location, setLocation] = useState(selectedProduct?.location || 'Dubai, UAE');
-  const [currency, setCurrency] = useState(selectedProduct?.currency || 'AED');
   
-  // Get available subcategories based on selected category
-  const getAvailableSubcategories = () => {
-    const selectedCategoryObj = categories.find(c => c.name === category);
-    return selectedCategoryObj?.subcategories || [];
-  };
-
-  // Whenever basic info fields change, notify parent
-  useEffect(() => {
-    if (onBasicInfoChange) {
-      onBasicInfoChange({ title, description, price, condition, location, currency, subcategory });
+  // Utility: render label with required indicator if applicable.
+  const renderLabel = (label: string, required?: boolean) => (
+    <span>
+      {label}
+      {required && <span className="text-red-500 ml-1">*</span>}
+    </span>
+  );
+  
+  // If a dynamic template is provided, render fields based on it.
+  const renderFields = () => {
+    if (basicInfoTemplate && basicInfoTemplate.length > 0) {
+      return basicInfoTemplate.map((field, index) => {
+        const key = field.id || field.label;
+        if (field.type === 'textarea') {
+          return (
+            <div key={index} className="mb-4">
+              <label className="block text-sm font-medium mb-1">
+                {renderLabel(field.label, field.required)}
+              </label>
+              <Textarea 
+                id={key}
+                placeholder={field.label}
+                rows={5}
+                value={basicInfo[key] || ""}
+                onChange={(e) => onBasicInfoChange(key, e.target.value)}
+              />
+            </div>
+          );
+        } else if (field.type === 'select' && field.options) {
+          return (
+            <div key={index} className="mb-4">
+              <label className="block text-sm font-medium mb-1">
+                {renderLabel(field.label, field.required)}
+              </label>
+              <select 
+                id={key}
+                value={basicInfo[key] || ""}
+                onChange={(e) => onBasicInfoChange(key, e.target.value)}
+                className="border rounded p-2 w-full"
+              >
+                <option value="">-- Select --</option>
+                {field.options.split(',').map(option => (
+                  <option key={option.trim()} value={option.trim()}>
+                    {option.trim()}
+                  </option>
+                ))}
+              </select>
+            </div>
+          );
+        } else {
+          return (
+            <div key={index} className="mb-4">
+              <label className="block text-sm font-medium mb-1">
+                {renderLabel(field.label, field.required)}
+              </label>
+              <input 
+                type="text" 
+                id={key}
+                placeholder={field.label}
+                value={basicInfo[key] || ""}
+                onChange={(e) => onBasicInfoChange(key, e.target.value)}
+                className="border rounded p-2 w-full"
+              />
+            </div>
+          );
+        }
+      });
+    } else {
+      // Default layout with clear labels for required fields.
+      return (
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium mb-1">
+              {renderLabel("Title", true)}
+            </label>
+            <input 
+              type="text" 
+              placeholder="Enter the title"
+              value={basicInfo.title}
+              onChange={(e) => onBasicInfoChange("title", e.target.value)}
+              className="border rounded p-2 w-full mb-2"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">
+              {renderLabel("Description", true)}
+            </label>
+            <Textarea 
+              id="description" 
+              placeholder="Describe your item in detail"
+              rows={5}
+              value={basicInfo.description}
+              onChange={(e) => onBasicInfoChange("description", e.target.value)}
+            />
+          </div>
+          {presetCategory && (
+            <div className="space-y-4 border-t pt-4">
+              <h3 className="text-lg font-medium">{presetCategory} Details</h3>
+              <CategoryFieldsMapper category={presetCategory} /> 
+            </div>
+          )}
+        </div>
+      );
     }
-  }, [title, description, price, condition, location, currency, subcategory, onBasicInfoChange]);
+  };
 
   return (
     <div className="space-y-6">
-      <h2 className="text-xl font-semibold">Basic Information</h2>
-      
-      <div className="space-y-4">
-        <div>
-          <Label htmlFor="title">Product Title</Label>
-          <Input 
-            type="text" 
-            id="title" 
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            placeholder="Enter a descriptive title"
-          />
-        </div>
-        
-        {/* Render category selector only if a presetCategory is not provided */}
-        {!presetCategory && (
-          <div>
-            <Label htmlFor="category">Category</Label>
-            <Select 
-              value={category} 
-              onValueChange={(value) => {
-                setCategory(value);
-                setSubcategory(''); // Reset subcategory when category changes
-              }}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select a category" />
-              </SelectTrigger>
-              <SelectContent>
-                {categories.map((cat) => (
-                  <SelectItem key={cat.id} value={cat.name}>
-                    {cat.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        )}
-
-        {(presetCategory && category) && (
-          <div>
-            <Label>Category</Label>
-            <p className="py-2 px-3 border rounded bg-gray-100">{category}</p>
-          </div>
-        )}
-        
-        {getAvailableSubcategories().length > 0 && (
-          <div>
-            <Label htmlFor="subcategory">Subcategory</Label>
-            <Select value={subcategory} onValueChange={setSubcategory}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select a subcategory" />
-              </SelectTrigger>
-              <SelectContent>
-                {getAvailableSubcategories().map((subcat, index) => (
-                  <SelectItem key={index} value={subcat}>
-                    {subcat}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        )}
-        
-        <div>
-          <Label htmlFor="condition">Condition</Label>
-          <Select value={condition} onValueChange={setCondition}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select condition" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="New">New</SelectItem>
-              <SelectItem value="Like New">Like New</SelectItem>
-              <SelectItem value="Excellent">Excellent</SelectItem>
-              <SelectItem value="Good">Good</SelectItem>
-              <SelectItem value="Fair">Fair</SelectItem>
-              <SelectItem value="Poor">Poor</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <Label htmlFor="price">Price</Label>
-            <Input 
-              type="number" 
-              id="price" 
-              value={price}
-              onChange={(e) => setPrice(e.target.value)}
-              placeholder="Enter price"
-            />
-          </div>
-          
-          <div>
-            <Label htmlFor="currency">Currency</Label>
-            <Select value={currency} onValueChange={setCurrency}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select currency" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="AED">AED</SelectItem>
-                <SelectItem value="USD">USD</SelectItem>
-                <SelectItem value="EUR">EUR</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-        
-        <div>
-          <Label htmlFor="location">Location</Label>
-          <Input 
-            type="text" 
-            id="location" 
-            value={location}
-            onChange={(e) => setLocation(e.target.value)}
-            placeholder="Enter location"
-          />
-        </div>
-        
-        <div>
-          <Label htmlFor="description">Description</Label>
-          <Textarea 
-            id="description" 
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-            placeholder="Describe your item in detail"
-            rows={5}
-          />
-        </div>
-      </div>
-      
-      {/* Category-specific fields section */}
-      {category && (
-        <div className="space-y-4 border-t pt-4">
-          <h3 className="text-lg font-medium">{category} Details</h3>
-          <CategoryFieldsMapper category={category} />
-        </div>
-      )}
+      {renderFields()}
     </div>
   );
 };

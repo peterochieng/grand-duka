@@ -30,11 +30,12 @@ import { CategoryRow } from '@/lib/types/supabaseTypes';
 export const Categories = () => {
   const [loading, setLoading] = useState(true);
   const [categories, setCategories] = useState<CategoryRow[]>([]);
-  const [categoryCounts, setCategoryCounts] = useState<Record<string, number>>({});
+  // We'll now store product counts per category for published items only.
+  const [productCounts, setProductCounts] = useState<Record<string, number>>({});
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const fetchCategoriesAndCounts = async () => {
+    const fetchData = async () => {
       try {
         // Fetch categories from Supabase
         const { data: categoriesData, error: categoriesError } = await supabase
@@ -42,44 +43,34 @@ export const Categories = () => {
           .select('*')
           .order('name');
         
-        if (categoriesError) {
-          throw categoriesError;
-        }
-        
+        if (categoriesError) throw categoriesError;
         setCategories(categoriesData || []);
 
-        // Fetch actual subcategories from Supabase
-        const { data: subcategoriesData, error: subcategoriesError } = await supabase
-          .from('subcategories')
-          .select('category_id');
+        // Fetch only published products from Supabase to compute real counts
+        const { data: productsData, error: productsError } = await supabase
+          .from('products')
+          .select('category')
+          .eq('approval_status', 'published');
         
-        if (subcategoriesError) {
-          throw subcategoriesError;
-        }
-
-        // Build counts dictionary keyed by category id
-        const countsById: Record<string, number> = {};
-        subcategoriesData?.forEach(subcat => {
-          if (subcat.category_id) {
-            countsById[subcat.category_id] = (countsById[subcat.category_id] || 0) + 1;
+        if (productsError) throw productsError;
+        
+        // Build counts dictionary keyed by category id based on published products
+        const counts: Record<string, number> = {};
+        productsData?.forEach(product => {
+          if (product.category) {
+            counts[product.category] = (counts[product.category] || 0) + 1;
           }
         });
-
-        // Map counts to category names
-        const categoryCountsMap: Record<string, number> = {};
-        categoriesData?.forEach(category => {
-          categoryCountsMap[category.name] = countsById[category.id] || 0;
-        });
-        setCategoryCounts(categoryCountsMap);
+        setProductCounts(counts);
       } catch (err) {
-        console.error('Error fetching categories:', err);
+        console.error('Error fetching categories/products:', err);
         setError('Failed to load categories');
       } finally {
         setLoading(false);
       }
     };
     
-    fetchCategoriesAndCounts();
+    fetchData();
   }, []);
 
   const getIcon = (iconName: string | null) => {
@@ -95,7 +86,6 @@ export const Categories = () => {
       case 'GamepadIcon': return <Gamepad2 {...iconProps} />;
       case 'Trophy': return <Trophy {...iconProps} />;
       case 'Dumbbell': return <Dumbbell {...iconProps} />;
-      case 'Toy': return <Gamepad2 {...iconProps} />;
       case 'Briefcase': return <Briefcase {...iconProps} />;
       case 'Music': return <Music2 {...iconProps} />;
       case 'History': return <History {...iconProps} />;
@@ -112,14 +102,8 @@ export const Categories = () => {
     }
   };
 
-  // Get the appropriate route for each category
-  const getCategoryRoute = (categoryName: string) => {
-    const name = categoryName.toLowerCase();
-    if (name === 'motors' || name === 'vehicles') {
-      return '/category/vehicles';
-    }
-    return `/category/${name}`;
-  };
+  // Build route using the real category id
+  const getCategoryRoute = (categoryId: string) => `/category/${categoryId}`;
 
   if (error) {
     return (
@@ -154,14 +138,15 @@ export const Categories = () => {
   return (
     <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 animate-fade-in">
       {categories.filter(category => category.is_published).map((category) => {
-        const actualCount = categoryCounts[category.name] || 0;
+        // Use productCounts from the published products query
+        const count = productCounts[category.id] || 0;
         return (
-          <Link key={category.id} to={getCategoryRoute(category.name)}>
+          <Link key={category.id} to={getCategoryRoute(category.id)}>
             <Card className="transition-all duration-300 hover:shadow-md hover:-translate-y-1 bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-800">
               <CardContent className="flex flex-col items-center justify-center py-6">
                 {getIcon(category.icon)}
                 <h3 className="font-medium text-sm mb-1">{category.name}</h3>
-                <p className="text-xs text-muted-foreground">{actualCount} items</p>
+                <p className="text-xs text-muted-foreground">{count} items</p>
               </CardContent>
             </Card>
           </Link>

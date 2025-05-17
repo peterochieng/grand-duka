@@ -1,4 +1,3 @@
-
 import React from 'react';
 import RetailFilterSidebar from '@/components/retail/RetailFilterSidebar';
 import { Category, Product } from '@/lib/types';
@@ -11,12 +10,14 @@ interface FilterSidebarProps {
   products: Product[];
 }
 
+
 const FilterSidebar = ({
   filters,
   updateFilters,
   categories,
   products
 }: FilterSidebarProps) => {
+
   return (
     <div className="w-full md:w-1/4 lg:w-1/5">
       <RetailFilterSidebar 

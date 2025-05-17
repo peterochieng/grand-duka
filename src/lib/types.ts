@@ -5,8 +5,14 @@ export type Product = {
   id: string;
   title: string;
   price: number;
+  images?:any;
   currency: string;
+  approved_by?: any;
+  approved_at?:any;
   image: string;
+  template_fields?:any;
+  rejection_reason?:any;
+  challenge_reason?:any;
   description: string;
   seller: {
     id: string;
@@ -43,6 +49,7 @@ export type Product = {
   tags: string[];
   shipping: number;
   featured?: boolean;
+  approval_status?: any;
   createdAt: string;
   updatedAt: string; // This is the property name we need to use
   relisted?: boolean;

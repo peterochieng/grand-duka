@@ -7,13 +7,24 @@ import { handleSellerData } from './utils';
 import { fetchAllProducts } from '@/lib/products';
 
 export const getProducts = async (query: string): Promise<Product[]> => {
-  // Replace with your real data fetching logic (e.g., API call to your Supabase database)
-  const allProducts: Product[] = await fetchAllProducts(); // your actual function to fetch products
-  if (!query.trim()) return allProducts;
-  return allProducts.filter((product) =>
-    product.title.toLowerCase().includes(query.toLowerCase()) ||
-    product.description.toLowerCase().includes(query.toLowerCase())
-  );
+  // Fetch all products from the database
+  const allProducts: Product[] = await fetchAllProducts();
+  
+  // If query is empty or contains only whitespace, return all products
+  if (!query || !query.trim()) {
+    return allProducts;
+  }
+  
+  // Filter products by checking title and description (only if defined)
+  return allProducts?.filter((product) => {
+    const title = typeof product.title === 'string' ? product.title : '';
+    const description = typeof product.description === 'string' ? product.description : '';
+    
+    return (
+      title.toLowerCase().includes(query.toLowerCase()) ||
+      description.toLowerCase().includes(query.toLowerCase())
+    );
+  });
 };
 
 export const getProductById = async (id: string): Promise<Product | null> => {

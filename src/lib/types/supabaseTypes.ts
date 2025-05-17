@@ -60,9 +60,15 @@ export interface ShopRow {
 
 export interface ProductRow {
   id: string;
+  images?:any;
+  template_fields?:any;
+  challenge_reason?:any;
   title: string;
   description?: string;
+  listingtypes?: any;
+  template?: any;
   price: number;
+  rejection_reason?:any;
   currency: string;
   image?: string;
   condition?: string;
@@ -71,7 +77,7 @@ export interface ProductRow {
   subcategory?: string;
   tags?: string[];
   seller_id: string;
-  approval_status: string;
+  approval_status: any;
   approved_by?: string;
   approved_at?: string;
   featured: boolean;
@@ -166,10 +172,10 @@ export const convertProductRowToProduct = (row: ProductRow): Product => {
     price: row.price,
     currency: row.currency,
     image: row.image || '/placeholder.svg',
-    condition: row.condition,
-    location: row.location,
+    condition: row.condition || '',
+    location: row.location || '',
     category: row.category || 'Uncategorized',
-    subcategory: row.subcategory,
+    subcategory: row.subcategory || '',
     tags: row.tags || [],
     seller: {
       id: row.seller_id,
@@ -181,11 +187,18 @@ export const convertProductRowToProduct = (row: ProductRow): Product => {
     shipping: row.shipping,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
-    // Default empty listingTypes object to match Product type
-    listingTypes: {
+    listingTypes: row.listingtypes || {
       auction: { enabled: false },
       buyItNow: { enabled: true, price: row.price },
       bestOffer: { enabled: false }
-    }
+    },
+    approval_status: row.approval_status,
+    approved_by: row.approved_by,  // added field
+    approved_at: row.approved_at,  // added field
+    template: row.template,        // added field if available
+    rejection_reason: row.rejection_reason, // added field
+    challenge_reason: row.challenge_reason, // added field
+    images: row.images || [],
+    template_fields: row.template_fields || {}
   };
 };

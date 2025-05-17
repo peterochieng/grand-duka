@@ -21,7 +21,6 @@ import { ProductWithApproval, getProductsForApproval, approveProduct, rejectProd
 import { toast } from 'sonner';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useCategories } from '@/hooks/useCategories';
-// Import our new hook to get all subcategories.
 import { useAllSubcategories } from '@/hooks/useAllSubcategories';
 import {
   Dialog,
@@ -38,10 +37,8 @@ export const ProductApprovals = () => {
   const [sortBy, setSortBy] = useState<'oldest' | 'newest'>('newest');
   const [processingProducts, setProcessingProducts] = useState<Set<string>>(new Set());
   const { user } = useCurrentUser();
-  // Fetch main categories from the database.
-  const { categories: dbCategories, loading: catLoading } = useCategories();
-  // Use the new hook to fetch all subcategories.
-  const { subcategories: dbSubcategories, loading: subCatLoading } = useAllSubcategories();
+  const { categories: dbCategories } = useCategories();
+  const { subcategories: dbSubcategories } = useAllSubcategories();
 
   // State for rejection feedback dialog.
   const [showRejectDialog, setShowRejectDialog] = useState(false);
@@ -52,7 +49,7 @@ export const ProductApprovals = () => {
     const fetchProducts = async () => {
       try {
         setLoading(true);
-        // getProductsForApproval returns only products pending review.
+        // getProductsForApproval returns only products with status 'pending_review'
         const pendingProducts = await getProductsForApproval();
         const sortedProducts = [...pendingProducts].sort((a, b) => {
           const dateA = new Date(a.createdAt).getTime();
@@ -79,6 +76,7 @@ export const ProductApprovals = () => {
     try {
       const success = await approveProduct(productId, user.id);
       if (success) {
+        // After approval, product status is set to "pending"
         setProducts(prev => prev.filter(p => p.id !== productId));
         toast.success('Product approved successfully');
       } else {
@@ -196,6 +194,7 @@ export const ProductApprovals = () => {
                   <TableHead>Price</TableHead>
                   <TableHead>Seller</TableHead>
                   <TableHead>Submitted</TableHead>
+                  <TableHead>Challenge</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -209,23 +208,19 @@ export const ProductApprovals = () => {
                         className="w-16 h-16 object-cover rounded"
                       />
                     </TableCell>
-                    <TableCell className="font-medium">
-                      {product.title}
-                    </TableCell>
-                    <TableCell>
-                      {renderCategoryCell(product)}
-                    </TableCell>
-                    <TableCell>
-                      {product.currency} {product.price.toFixed(2)}
-                    </TableCell>
+                    <TableCell className="font-medium">{product.title}</TableCell>
+                    <TableCell>{renderCategoryCell(product)}</TableCell>
+                    <TableCell>{product.currency} {product.price.toFixed(2)}</TableCell>
                     <TableCell>
                       {product.seller.name}
                       {product.seller.verified && (
                         <Badge variant="secondary" className="ml-1">Verified</Badge>
                       )}
                     </TableCell>
+                    <TableCell>{new Date(product.createdAt).toLocaleDateString()}</TableCell>
                     <TableCell>
-                      {new Date(product.createdAt).toLocaleDateString()}
+                      {/* Show challenge reason if available; otherwise, display "-" */}
+                      {product.challenge_reason ? product.challenge_reason : '-'}
                     </TableCell>
                     <TableCell>
                       <div className="flex space-x-2">

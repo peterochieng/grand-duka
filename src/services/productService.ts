@@ -21,7 +21,7 @@ import {
 } from '@/services/product/featured';
 
 export const getProducts = async (filters?: ProductQueryFilters): Promise<ProductQueryResult> => {
-  return await getProductsQuery(filters);
+  return await getProductsQuery(filters as any);
 };
 
 export const getProductById = async (id: string): Promise<Product | null> => {

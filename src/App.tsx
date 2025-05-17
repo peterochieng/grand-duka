@@ -24,7 +24,7 @@ import SearchResults from './components/SearchResults';
 import ProductDetail from './pages/ProductDetail';
 import CategoryPage from './pages/CategoryPage';
 import SellerInventory from './components/seller/SellerInventory';
-
+// http://localhost:3000/src/components/Categories.tsx:18:35
 function App() {
   return (
     <ToastProvider>

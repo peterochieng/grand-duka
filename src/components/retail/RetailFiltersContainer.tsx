@@ -1,11 +1,10 @@
-
 import React, { useCallback } from 'react';
 import { Product } from '@/lib/types';
-import { Category } from '@/lib/types';
 import { Filters } from './filters/FilterTypes';
 import FilterSidebar from './filters/container/FilterSidebar';
 import FilterContent from './filters/container/FilterContent';
 import { SortOption } from '@/hooks/retail-filters/types';
+import { useCategories } from '@/hooks/useCategories';
 
 interface RetailFiltersContainerProps {
   products: Product[];
@@ -16,7 +15,6 @@ interface RetailFiltersContainerProps {
   clearAllFilters: () => void;
   searchTerm: string;
   onClearSearch: () => void;
-  categories: Category[];
   sortOption: SortOption;
   setSortOption: (option: SortOption) => void;
   children?: React.ReactNode;
@@ -31,15 +29,23 @@ const RetailFiltersContainer = ({
   clearAllFilters,
   searchTerm,
   onClearSearch,
-  categories,
   sortOption,
   setSortOption,
   children
 }: RetailFiltersContainerProps) => {
+  const { categories, loading: catLoading, error: catError } = useCategories();
+
   // Memoized handler to prevent unnecessary re-renders
   const handleUpdateFilters = useCallback((newFilters: Partial<Filters>) => {
     updateFilters(newFilters);
   }, [updateFilters]);
+
+  if (catLoading) {
+    return <p>Loading categories...</p>;
+  }
+  if (catError) {
+    return <p className="text-red-500">Error loading categories</p>;
+  }
 
   return (
     <div className="flex flex-col md:flex-row gap-6">
@@ -61,6 +67,7 @@ const RetailFiltersContainer = ({
         onClearSearch={onClearSearch}
         sortOption={sortOption}
         setSortOption={setSortOption}
+        categories={categories}  // Pass live categories down
       >
         {children}
       </FilterContent>

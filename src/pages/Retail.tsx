@@ -1,14 +1,17 @@
-
 import React from 'react';
 import Layout from '@/components/Layout';
-import { products } from '@/lib/products';
-import { categories } from '@/lib/categories';
 import RetailHeader from '@/components/retail/RetailHeader';
 import RetailProductsDisplay from '@/components/retail/RetailProductsDisplay';
 import RetailFiltersContainer from '@/components/retail/RetailFiltersContainer';
+import { useProducts } from '@/hooks/useProducts';
 import { useRetailFilters } from '@/hooks/useRetailFilters';
 
 const Retail = () => {
+  // Fetch products from the database
+  const { products, loading: productsLoading, error } = useProducts();
+
+
+  // Pass the fetched products to the retail filters hook
   const {
     displayProducts,
     filters,
@@ -19,12 +22,17 @@ const Retail = () => {
     removeFilter,
     clearAllFilters,
     handleSearch,
-    setSortOption
+    setSortOption,
   } = useRetailFilters(products);
 
   return (
     <Layout>
       <div className="container px-4 mx-auto py-8">
+        {error && (
+          <p className="text-red-500">
+            Failed to load products: {error.message}
+          </p>
+        )}
         {/* Hero Section */}
         <RetailHeader 
           searchTerm={searchTerm} 
@@ -41,7 +49,6 @@ const Retail = () => {
           clearAllFilters={clearAllFilters}
           searchTerm={searchTerm}
           onClearSearch={() => handleSearch('')}
-          categories={categories}
           sortOption={sortOption}
           setSortOption={setSortOption}
         >

@@ -1,20 +1,21 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useToast } from '@/hooks/use-toast';
-import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
-import ListingHeader from '@/components/shop/listing/ListingHeader';
-import ListingImportModal from '@/components/shop/listing/ListingImportModal';
-import TemplateManager from '@/components/shop/TemplateManager';
-import ListingTemplateBanner from '@/components/shop/listing/ListingTemplateBanner';
-import BasicInformationForm from '@/components/shop/listing/BasicInformationForm';
-import ListingOptionsForm from '@/components/shop/listing/ListingOptionsForm';
-import { useCategories } from '@/hooks/useCategories';
-import { useSubcategories } from '@/hooks/useSubcategories';
-import { useActiveTemplates } from '@/hooks/auth/useActiveTemplates';
-import { supabase } from '@/integrations/supabase/client';
-import { Product, Template } from '@/lib/types';
-import { useCurrentUser } from '@/hooks/useCurrentUser';
+import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useToast } from "@/hooks/use-toast";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import ListingHeader from "@/components/shop/listing/ListingHeader";
+import ListingImportModal from "@/components/shop/listing/ListingImportModal";
+import TemplateManager from "@/components/shop/TemplateManager";
+import ListingTemplateBanner from "@/components/shop/listing/ListingTemplateBanner";
+import BasicInformationForm from "@/components/shop/listing/BasicInformationForm";
+import ListingOptionsForm from "@/components/shop/listing/ListingOptionsForm";
+import { useCategories } from "@/hooks/useCategories";
+import { useSubcategories } from "@/hooks/useSubcategories";
+import { useActiveTemplates } from "@/hooks/auth/useActiveTemplates";
+import { supabase } from "@/integrations/supabase/client";
+import { Product, Template } from "@/lib/types";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { useBasicInfoTemplate } from "@/services/useBasicInfoTemplate";
 
 interface CreateListingProps {
   existingProduct?: Product;
@@ -30,25 +31,6 @@ const CreateListing = ({ existingProduct, isRelisting }: CreateListingProps) => 
   const [selectedSubcategoryId, setSelectedSubcategoryId] = useState<string | undefined>(undefined);
   const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [imagePreviews, setImagePreviews] = useState<string[]>([]);
-  
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      const filesArray = Array.from(e.target.files);
-      imagePreviews.forEach((url) => URL.revokeObjectURL(url));
-      setImageFiles(filesArray);
-      setImagePreviews(filesArray.map((file) => URL.createObjectURL(file)));
-    }
-  };
-
-  const removeImage = (index: number) => {
-    const updatedFiles = [...imageFiles];
-    const updatedPreviews = [...imagePreviews];
-    URL.revokeObjectURL(updatedPreviews[index]);
-    updatedFiles.splice(index, 1);
-    updatedPreviews.splice(index, 1);
-    setImageFiles(updatedFiles);
-    setImagePreviews(updatedPreviews);
-  };
 
   const { categories, loading: categoriesLoading } = useCategories();
   const { subcategories, loading: subcategoriesLoading } = useSubcategories(selectedCategoryId);
@@ -60,49 +42,33 @@ const CreateListing = ({ existingProduct, isRelisting }: CreateListingProps) => 
   const [showTemplateManager, setShowTemplateManager] = useState<boolean>(false);
   const [templateFieldValues, setTemplateFieldValues] = useState<Record<string, any>>({});
 
-  useEffect(() => {
-    if (selectedTemplate && selectedTemplate.fields) {
-      const initialValues: Record<string, any> = {};
-      selectedTemplate.fields.forEach((field: any) => {
-        initialValues[field.label] = '';
-      });
-      setTemplateFieldValues(initialValues);
-    } else {
-      setTemplateFieldValues({});
-    }
-  }, [selectedTemplate]);
+  console.log(selectedTemplate);
 
+  // Basic Information state – now controlled.
   const [basicInfo, setBasicInfo] = useState({
-    title: existingProduct?.title || '',
-    description: existingProduct?.description || '',
-    price: existingProduct ? String(existingProduct.price.parsedValue) : '',
-    condition: existingProduct?.condition || 'new',
-    location: existingProduct?.location || '',
-    currency: existingProduct?.currency || 'USD',
-    subcategory: ''
+    title: existingProduct?.title || "",
+    description: existingProduct?.description || "",
+    condition: existingProduct?.condition || "new",
+    location: existingProduct?.location || "",
+    subcategory: "",
   });
 
-  const [listingType, setListingType] = useState<string>('fixed');
+  // Listing Options states.
+  const [listingType, setListingType] = useState<string>("fixed");
   const [auctionEnabled, setAuctionEnabled] = useState<boolean>(false);
   const [startingBid, setStartingBid] = useState<number>(0);
   const [reservePrice, setReservePrice] = useState<number>(0);
-  const [auctionDuration, setAuctionDuration] = useState<string>('7');
+  const [auctionDuration, setAuctionDuration] = useState<string>("7");
   const [fixedPriceEnabled, setFixedPriceEnabled] = useState<boolean>(false);
   const [fixedPrice, setFixedPrice] = useState<number>(0);
   const [bestOfferEnabled, setBestOfferEnabled] = useState<boolean>(false);
   const [minimumOffer, setMinimumOffer] = useState<number>(0);
+  const [currency, setCurrency] = useState<string>("USD");
   const [submitting, setSubmitting] = useState<boolean>(false);
 
-  const handleBasicInfoChange = (info: {
-    title: string;
-    description: string;
-    price: string;
-    condition: string;
-    location: string;
-    currency: string;
-    subcategory: string;
-  }) => {
-    setBasicInfo(info);
+  // Update a single basic info field.
+  const handleBasicInfoChange = (fieldKey: string, value: string) => {
+    setBasicInfo((prev) => ({ ...prev, [fieldKey]: value }));
   };
 
   const handleTemplateSelect = (template: Template) => {
@@ -113,7 +79,7 @@ const CreateListing = ({ existingProduct, isRelisting }: CreateListingProps) => 
 
   const handleExistingProductSelect = (product: Product) => {
     setSelectedProduct(product);
-    setListingType(product.listingTypes?.auction?.enabled ? 'auction' : 'fixed');
+    setListingType(product.listingTypes?.auction?.enabled ? "auction" : "fixed");
     setAuctionEnabled(!!product.listingTypes?.auction?.enabled);
     setStartingBid(product.listingTypes?.auction?.startingBid || 0);
     setReservePrice(product.listingTypes?.auction?.reservePrice || 0);
@@ -121,34 +87,58 @@ const CreateListing = ({ existingProduct, isRelisting }: CreateListingProps) => 
     setFixedPrice(product.listingTypes?.buyItNow?.price || 0);
     setBestOfferEnabled(!!product.listingTypes?.bestOffer?.enabled);
     setMinimumOffer(product.listingTypes?.bestOffer?.minOffer || 0);
+    setCurrency(product.currency || "USD");
     setShowImportModal(false);
   };
 
   const selectedCategoryObject = categories.find((cat: any) => cat.id === selectedCategoryId);
   const selectedSubcategoryObject = subcategories.find((sc: any) => sc.id === selectedSubcategoryId);
+
+  // Determine if the listing is in a restricted category/subcategory.
   const isUnderReview =
     selectedCategoryObject?.restricted ||
     selectedCategoryObject?.requires_review ||
     selectedSubcategoryObject?.restricted;
 
-  // Handler to update a dynamic template field value
   const handleTemplateFieldChange = (label: string, value: string) => {
-    setTemplateFieldValues(prev => ({
+    setTemplateFieldValues((prev) => ({
       ...prev,
-      [label]: value
+      [label]: value,
     }));
   };
 
+  // Handle file input for image upload.
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files) return;
+    const filesArray = Array.from(e.target.files);
+    const validFiles: File[] = [];
+    const previews: string[] = [];
+    for (const file of filesArray) {
+      if (file.size > 5 * 1024 * 1024) {
+        toast({ title: "File Too Large", description: "Each image must be 5MB or less." });
+        continue;
+      }
+      if (validFiles.length < 5) {
+        validFiles.push(file);
+        previews.push(URL.createObjectURL(file));
+      } else {
+        toast({ title: "Image Limit Exceeded", description: "You can upload up to 5 images." });
+        break;
+      }
+    }
+    // Revoke old URLs.
+    imagePreviews.forEach((url) => URL.revokeObjectURL(url));
+    setImageFiles(validFiles);
+    setImagePreviews(previews);
+  };
+
   const resetForm = () => {
-    // Clear all form state to defaults
     setBasicInfo({
-      title: '',
-      description: '',
-      price: '',
-      condition: 'new',
-      location: '',
-      currency: 'USD',
-      subcategory: ''
+      title: "",
+      description: "",
+      condition: "new",
+      location: "",
+      subcategory: "",
     });
     setSelectedCategoryId(undefined);
     setSelectedSubcategoryId(undefined);
@@ -156,24 +146,55 @@ const CreateListing = ({ existingProduct, isRelisting }: CreateListingProps) => 
     setSelectedTemplateId(null);
     setTemplateFieldValues({});
     setImageFiles([]);
+    imagePreviews.forEach((url) => URL.revokeObjectURL(url));
     setImagePreviews([]);
-    setListingType('fixed');
+    setListingType("fixed");
     setAuctionEnabled(false);
     setStartingBid(0);
     setReservePrice(0);
-    setAuctionDuration('7');
+    setAuctionDuration("7");
     setFixedPriceEnabled(false);
     setFixedPrice(0);
     setBestOfferEnabled(false);
     setMinimumOffer(0);
+    setCurrency("USD");
   };
 
-  // Modified submit handler to update when editing
+  // Determine final price.
+  const finalPrice = listingType === "auction" ? startingBid : fixedPrice;
+
+  // Load basic info template from admin.
+  const { basicInfoTemplate, loading: basicInfoLoading } = useBasicInfoTemplate(
+    selectedCategoryId,
+    selectedSubcategoryId
+  );
+
+  // Validate basic info fields.
+  const validateBasicInfo = (): string[] => {
+    const missing: string[] = [];
+    if (basicInfoTemplate && basicInfoTemplate.length > 0) {
+      basicInfoTemplate.forEach((field) => {
+        const key = field.id || field.label;
+        if (field.required && (!basicInfo[key] || basicInfo[key].trim() === "")) {
+          missing.push(field.label);
+        }
+      });
+    } else {
+      if (!basicInfo.title || basicInfo.title.trim() === "") missing.push("Title");
+      if (!basicInfo.description || basicInfo.description.trim() === "") missing.push("Description");
+    }
+    return missing;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const submitType = (e.nativeEvent as any).submitter.name; // "redirect" or "addAnother"
-    if (!basicInfo.title || !basicInfo.price) {
-      toast({ title: "Validation Error", description: "Please fill out the required fields." });
+    const submitType = (e.nativeEvent as any).submitter.name;
+    const missingFields = validateBasicInfo();
+    if (missingFields.length > 0) {
+      toast({
+        title: "Validation Error",
+        description: `The following required fields are missing: ${missingFields.join(", ")}`
+      });
       return;
     }
     if (!user || !user.id) {
@@ -182,19 +203,20 @@ const CreateListing = ({ existingProduct, isRelisting }: CreateListingProps) => 
     }
 
     setSubmitting(true);
+    // For listings in a restricted category/subcategory, force approval_status to "pending_review".
     const approvalStatus = isUnderReview ? "pending_review" : "pending";
 
     const listingTypes = {
       auction: { enabled: auctionEnabled, startingBid, reservePrice },
       buyItNow: { enabled: fixedPriceEnabled, price: fixedPrice },
-      bestOffer: { enabled: bestOfferEnabled, minOffer: minimumOffer }
+      bestOffer: { enabled: bestOfferEnabled, minOffer: minimumOffer },
     };
 
     const newListing: any = {
       title: basicInfo.title,
       description: basicInfo.description,
-      price: Number(basicInfo.price),
-      currency: basicInfo.currency,
+      price: finalPrice,
+      currency: currency,
       seller_id: user.id,
       condition: basicInfo.condition,
       location: basicInfo.location,
@@ -209,20 +231,21 @@ const CreateListing = ({ existingProduct, isRelisting }: CreateListingProps) => 
       template: selectedTemplate
         ? { id: selectedTemplate.id, name: selectedTemplate.name, type: selectedTemplate.type }
         : null,
-      template_fields: templateFieldValues
+      template_fields: templateFieldValues,
     };
 
-    // If new images were added, upload them
+    console.log(newListing);
+
     if (imageFiles.length > 0) {
       const imageUrls: string[] = [];
       for (const imageFile of imageFiles) {
-        const fileExt = imageFile.name.split('.').pop();
+        const fileExt = imageFile.name.split(".").pop();
         const fileName = `${Date.now()}-${imageFile.name}`;
         const filePath = `products/${user.id}/${fileName}`;
 
         const { error: uploadError } = await supabase
           .storage
-          .from('product-images')
+          .from("product-images")
           .upload(filePath, imageFile);
 
         if (uploadError) {
@@ -232,10 +255,9 @@ const CreateListing = ({ existingProduct, isRelisting }: CreateListingProps) => 
           return;
         }
 
-        const { data: { publicUrl } } = supabase
-          .storage
-          .from('product-images')
-          .getPublicUrl(filePath);
+        const {
+          data: { publicUrl },
+        } = supabase.storage.from("product-images").getPublicUrl(filePath);
         if (publicUrl) {
           imageUrls.push(publicUrl);
         }
@@ -248,16 +270,10 @@ const CreateListing = ({ existingProduct, isRelisting }: CreateListingProps) => 
 
     let result;
     if (existingProduct) {
-      // Update existing product record
-      result = await supabase
-        .from("products")
-        .update(newListing)
-        .eq("id", existingProduct.id);
+      result = await supabase.from("products").update(newListing).eq("id", existingProduct.id);
     } else {
-      // Insert new record
-      result = await supabase
-        .from("products")
-        .insert([newListing]);
+      result = await supabase.from("products").insert([newListing]);
+      console.log(result);
     }
 
     setSubmitting(false);
@@ -265,7 +281,10 @@ const CreateListing = ({ existingProduct, isRelisting }: CreateListingProps) => 
       console.error("Error submitting listing:", result.error);
       toast({ title: "Submission Error", description: "Failed to save listing." });
     } else {
-      toast({ title: "Success", description: existingProduct ? "Listing updated successfully!" : "Listing created successfully!" });
+      toast({
+        title: "Success",
+        description: existingProduct ? "Listing updated successfully!" : "Listing created successfully!",
+      });
       console.log("Listing response:", result.data);
       if (submitType === "redirect") {
         navigate("/retail/seller-inventory");
@@ -274,8 +293,6 @@ const CreateListing = ({ existingProduct, isRelisting }: CreateListingProps) => 
       }
     }
   };
-
-  const showListingForm = !showTemplateManager && !showImportModal;
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
@@ -294,13 +311,11 @@ const CreateListing = ({ existingProduct, isRelisting }: CreateListingProps) => 
             <div className="h-10 bg-gray-200 animate-pulse rounded" />
           ) : (
             <select
-              value={selectedCategoryId || ''}
+              value={selectedCategoryId || ""}
               onChange={(e) => {
                 const catId = e.target.value || undefined;
                 setSelectedCategoryId(catId);
                 setSelectedSubcategoryId(undefined);
-                setSelectedTemplate(null);
-                setSelectedTemplateId(null);
               }}
               className="border rounded p-2 w-full"
             >
@@ -321,12 +336,8 @@ const CreateListing = ({ existingProduct, isRelisting }: CreateListingProps) => 
             <div className="h-10 bg-gray-200 animate-pulse rounded" />
           ) : (
             <select
-              value={selectedSubcategoryId || ''}
-              onChange={(e) => {
-                setSelectedSubcategoryId(e.target.value || undefined);
-                setSelectedTemplate(null);
-                setSelectedTemplateId(null);
-              }}
+              value={selectedSubcategoryId || ""}
+              onChange={(e) => setSelectedSubcategoryId(e.target.value || undefined)}
               className="border rounded p-2 w-full"
             >
               <option value="">-- Select a subcategory --</option>
@@ -339,18 +350,11 @@ const CreateListing = ({ existingProduct, isRelisting }: CreateListingProps) => 
           )}
         </div>
 
-        {/* Restricted Notice */}
-        {isUnderReview && (
-          <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-md mb-4">
-            <p className="text-sm text-blue-800">
-              Note: This category/subcategory is restricted. Your listing will be subject to admin review before it goes live.
-            </p>
-          </div>
-        )}
-
-        {/* New Product Image Field */}
+        {/* File Input for Image Upload */}
         <div className="mb-4">
-          <label className="block text-sm font-medium mb-1">Product Images</label>
+          <label className="block text-sm font-medium mb-1">
+            Upload Product Images (Max 5, 5MB each)
+          </label>
           <input
             type="file"
             accept="image/*"
@@ -360,15 +364,23 @@ const CreateListing = ({ existingProduct, isRelisting }: CreateListingProps) => 
           />
         </div>
 
-        {/* Image Preview */}
+        {/* Image Preview Grid */}
         {imagePreviews.length > 0 && (
-          <div className="grid grid-cols-3 gap-2 mt-2">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
             {imagePreviews.map((src, i) => (
               <div key={i} className="relative border rounded overflow-hidden">
                 <img src={src} alt={`Preview ${i + 1}`} className="w-full h-24 object-cover" />
                 <button
                   type="button"
-                  onClick={() => removeImage(i)}
+                  onClick={() => {
+                    const updatedFiles = [...imageFiles];
+                    const updatedPreviews = [...imagePreviews];
+                    URL.revokeObjectURL(updatedPreviews[i]);
+                    updatedFiles.splice(i, 1);
+                    updatedPreviews.splice(i, 1);
+                    setImageFiles(updatedFiles);
+                    setImagePreviews(updatedPreviews);
+                  }}
                   className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 text-xs"
                 >
                   X
@@ -378,16 +390,28 @@ const CreateListing = ({ existingProduct, isRelisting }: CreateListingProps) => 
           </div>
         )}
 
+        {/* Basic Information Section Header */}
+        <h3 className="text-lg font-medium mb-4">Basic Information</h3>
+
         {/* Basic Information Form */}
-        <BasicInformationForm 
-          selectedProduct={selectedProduct} 
+        <BasicInformationForm
+          selectedProduct={selectedProduct}
           presetCategory={
-            selectedCategoryId 
-              ? categories.find((cat: any) => cat.id === selectedCategoryId)?.name || ''
-              : ''
+            selectedCategoryId
+              ? categories.find((cat: any) => cat.id === selectedCategoryId)?.name || ""
+              : ""
           }
+          basicInfo={basicInfo}
           onBasicInfoChange={handleBasicInfoChange}
+          basicInfoTemplate={basicInfoTemplate}
         />
+
+        {/* Notice for restricted categories/subcategories */}
+        {isUnderReview && (
+          <div className="p-2 bg-yellow-50 border border-yellow-200 rounded text-sm text-yellow-700 mb-4">
+            Your listing is in a restricted category/subcategory and will be subject to admin review before publication.
+          </div>
+        )}
 
         {/* Template Selection */}
         {selectedSubcategoryId && (
@@ -397,7 +421,7 @@ const CreateListing = ({ existingProduct, isRelisting }: CreateListingProps) => 
               <div className="h-10 bg-gray-200 animate-pulse rounded" />
             ) : activeTemplates && activeTemplates.length > 0 ? (
               <select
-                value={selectedTemplateId || ''}
+                value={selectedTemplateId || ""}
                 onChange={(e) => {
                   const templateId = e.target.value;
                   setSelectedTemplateId(templateId);
@@ -406,9 +430,7 @@ const CreateListing = ({ existingProduct, isRelisting }: CreateListingProps) => 
                 }}
                 className="border rounded p-2 w-full"
               >
-                <option value="">
-                  -- Choose a template tailored to this subcategory --
-                </option>
+                <option value="">-- Choose a template tailored to this subcategory --</option>
                 {activeTemplates.map((template: any) => (
                   <option key={template.id} value={template.id}>
                     {template.name}
@@ -434,36 +456,86 @@ const CreateListing = ({ existingProduct, isRelisting }: CreateListingProps) => 
         {selectedTemplate && selectedTemplate.fields && (
           <div className="mb-4">
             <label className="block text-sm font-medium mb-1">Template Fields</label>
-            {selectedTemplate.fields.map((field: any, index: number) => (
-              <div key={index} className="mb-2">
-                <label className="block text-xs font-medium mb-1">{field.label}</label>
-                {field.type === 'dropdown' && field.options ? (
-                  <select
-                    value={templateFieldValues[field.label] || ''}
-                    onChange={(e) => handleTemplateFieldChange(field.label, e.target.value)}
-                    className="border rounded p-2 w-full"
-                  >
-                    <option value="">-- Select --</option>
-                    {field.options.split(',').map((option: string) => (
-                      <option key={option.trim()} value={option.trim()}>
-                        {option.trim()}
-                      </option>
-                    ))}
-                  </select>
-                ) : (
-                  <input
-                    type={field.type}
-                    value={templateFieldValues[field.label] || ''}
-                    onChange={(e) => handleTemplateFieldChange(field.label, e.target.value)}
-                    className="border rounded p-2 w-full"
-                  />
-                )}
-              </div>
-            ))}
+            {/* Flex container with negative horizontal margin to align half-width items side by side */}
+            <div className="flex flex-wrap -mx-2">
+              {selectedTemplate.fields.map((field: any, index: number) => {
+                const currentValue =
+                  templateFieldValues[field.label] !== undefined
+                    ? templateFieldValues[field.label]
+                    : field.defaultValue || "";
+                const fieldWidth = field.width ? field.width.toLowerCase() : "full";
+                let inputWidthClass = "";
+                let inputElement = null;
+
+                if (fieldWidth === "half" || fieldWidth === "full") {
+                  inputWidthClass = fieldWidth === "half" ? "w-1/2" : "w-full";
+                  if (field.type === "dropdown" && field.options) {
+                    inputElement = (
+                      <select
+                        value={currentValue}
+                        onChange={(e) => handleTemplateFieldChange(field.label, e.target.value)}
+                        className="border rounded p-2 w-full"
+                      >
+                        <option value="">-- Select --</option>
+                        {field.options.split(",").map((option: string) => (
+                          <option key={option.trim()} value={option.trim()}>
+                            {option.trim()}
+                          </option>
+                        ))}
+                      </select>
+                    );
+                  } else {
+                    inputElement = (
+                      <input
+                        type={field.type}
+                        value={currentValue}
+                        placeholder={field.defaultValue || ""}
+                        onChange={(e) => handleTemplateFieldChange(field.label, e.target.value)}
+                        className="border rounded p-2 w-full"
+                      />
+                    );
+                  }
+                } else if (fieldWidth === "dynamichalf" || fieldWidth === "dynamicfull") {
+                  inputWidthClass = fieldWidth === "dynamichalf" ? "w-1/2" : "w-full";
+                  inputElement = (
+                    <textarea
+                      rows={3}
+                      value={currentValue}
+                      placeholder={field.defaultValue || ""}
+                      onChange={(e) => handleTemplateFieldChange(field.label, e.target.value)}
+                      className="border rounded p-2 w-full"
+                    />
+                  );
+                } else {
+                  inputWidthClass = "w-full";
+                  inputElement = (
+                    <input
+                      type={field.type}
+                      value={currentValue}
+                      placeholder={field.defaultValue || ""}
+                      onChange={(e) => handleTemplateFieldChange(field.label, e.target.value)}
+                      className="border rounded p-2 w-full"
+                    />
+                  );
+                }
+                return (
+                  <div key={index} className={`px-2 ${inputWidthClass} mb-2`}>
+                    <label className="block text-xs font-medium mb-1">
+                      {field.label}
+                    </label>
+                    {field.instruction && (
+                      <p className="text-xs text-gray-500 mb-1">{field.instruction}</p>
+                    )}
+                    {inputElement}
+                  </div>
+                );
+              })}
+            </div>
           </div>
         )}
 
-        <ListingOptionsForm 
+        {/* Listing Options Form */}
+        <ListingOptionsForm
           listingType={listingType}
           setListingType={setListingType}
           startingBid={startingBid}
@@ -478,17 +550,16 @@ const CreateListing = ({ existingProduct, isRelisting }: CreateListingProps) => 
           setBestOfferEnabled={setBestOfferEnabled}
           minimumOffer={minimumOffer}
           setMinimumOffer={setMinimumOffer}
+          currency={currency}
+          setCurrency={setCurrency}
         />
 
         <div className="flex justify-end space-x-2">
-          <Button type="button" variant="outline" disabled={submitting}>
-            Save as Draft
-          </Button>
           <Button type="submit" name="redirect" disabled={submitting}>
-            {isRelisting ? 'Relist Item' : (submitting ? 'Submitting...' : 'Create Listing')}
+            {isRelisting ? "Relist Item" : submitting ? "Submitting..." : "Create Listing"}
           </Button>
           <Button type="submit" name="addAnother" disabled={submitting}>
-            {submitting ? 'Submitting...' : 'Create & Add Another'}
+            {submitting ? "Submitting..." : "Create & Add Another"}
           </Button>
         </div>
       </form>
@@ -499,9 +570,9 @@ const CreateListing = ({ existingProduct, isRelisting }: CreateListingProps) => 
         </Card>
       )}
       {showImportModal && (
-        <ListingImportModal 
-          onSelectProduct={handleExistingProductSelect} 
-          onCancel={() => setShowImportModal(false)} 
+        <ListingImportModal
+          onSelectProduct={handleExistingProductSelect}
+          onCancel={() => setShowImportModal(false)}
         />
       )}
     </div>

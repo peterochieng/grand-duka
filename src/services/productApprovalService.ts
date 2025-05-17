@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { Product } from '@/lib/types';
 import { ProductRow, convertProductRowToProduct } from '@/lib/types/supabaseTypes';
@@ -12,52 +11,29 @@ export interface ProductWithApproval extends Product {
 
 export const getProductsForApproval = async (): Promise<ProductWithApproval[]> => {
   try {
-    const { data: productRows, error } = await supabase
+    // Only fetch products that need admin review: pending_review status.
+    const { data, error } = await supabase
       .from('products')
       .select('*')
       .eq('approval_status', 'pending_review')
       .order('created_at', { ascending: false });
-
-
+    
     if (error) {
       console.error('Error fetching products for approval:', error);
       return [];
     }
-
-    if (!productRows || productRows.length === 0) {
-      return [];
-    }
-
-    // Fetch sellers to populate product seller information
-    const sellerIds = [...new Set(productRows.map(product => product.seller_id))];
     
-    if (sellerIds.length === 0) {
+    if (!data || data.length === 0) {
       return [];
     }
     
-    const { data: sellers } = await supabase
-      .from('sellers')
-      .select('*')
-      .in('id', sellerIds);
-    
-    const sellerMap = new Map(sellers?.map(seller => [seller.id, seller]) || []);
-
-    return productRows.map(row => {
-      const product = convertProductRowToProduct(row as any);
-      const seller = sellerMap.get(row.seller_id);
-      
-      if (seller) {
-        product.seller.name = seller.business_name;
-        product.seller.rating = seller.rating || 0;
-        product.seller.verified = seller.verified;
-      }
-      
+    return data.map(row => {
+      const product = convertProductRowToProduct(row as ProductRow);
+      // Override to preserve the approval_status field from the row.
       return {
         ...product,
-        approvalStatus: row.approval_status as 'pending' | 'approved' | 'rejected',
-        approvedBy: row.approved_by || undefined,
-        approvedAt: row.approved_at || undefined
-      };
+        approval_status: (row as any).approval_status,
+      } as ProductWithApproval;
     });
   } catch (e) {
     console.error('Exception in getProductsForApproval:', e);
@@ -70,10 +46,12 @@ export const approveProduct = async (
   adminId: string
 ): Promise<boolean> => {
   try {
+    // IMPORTANT: When an admin approves a product, we update the status to "pending"
+    // so that the seller can then see it and decide to publish it.
     const { error } = await supabase
       .from('products')
       .update({
-        approval_status: 'approved',
+        approval_status: 'pending',  // Changed from "approved" to "pending"
         approved_by: adminId,
         approved_at: new Date().toISOString()
       })
@@ -91,38 +69,32 @@ export const approveProduct = async (
   }
 };
 
-// const { data: { session } } = await supabase.auth.getSession();
-
-
-
 export const rejectProduct = async (
   productId: string,
   adminId: string,
   feedback: string
 ): Promise<boolean> => {
   try {
-    // Try to update and return the updated row using .select()
+    // When rejecting, set status to "rejected" and record the feedback.
     const { data, error } = await supabase
       .from('products')
       .update({
         approval_status: 'rejected',
-        approved_at: new Date().toISOString(),
-        approved_by: adminId,
-        rejection_reason: feedback, // Must match exactly your column name
+        rejection_reason: feedback,
+        updated_at: new Date().toISOString()
       })
       .eq('id', productId)
       .select();
-      
-    console.log('rejectProduct data:', data, 'error:', error);
-      
+    
     if (error) {
+      console.error('Error rejecting product:', error);
       return false;
     }
-    // Optionally check that data was returned and rejection_reason is updated:
-    if (data && data.length > 0 && data[0].rejection_reason === feedback) {
-      return true;
+    if (!data || data.length === 0) {
+      console.error('No rows updated for product id:', productId);
+      return false;
     }
-    return false;
+    return true;
   } catch (e) {
     console.error('Exception in rejectProduct:', e);
     return false;
@@ -146,8 +118,8 @@ export const resubmitListing = async (productId: string): Promise<boolean> => {
   const { data, error } = await supabase
     .from('products')
     .update({
-      approval_status: 'pending',
-      rejection_reason: null,  // Clear previous rejection feedback
+      approval_status: 'pending_review', // Updated to mark it for review again.
+      rejection_reason: null,  // Clear any previous rejection feedback.
       updated_at: new Date().toISOString(),
     })
     .eq('id', productId)
@@ -161,7 +133,6 @@ export const resubmitListing = async (productId: string): Promise<boolean> => {
     console.error('No rows updated for product id:', productId);
     return false;
   }
-  // Optionally log the updated row(s)
   console.log('Resubmitted listing data:', data);
   return true;
 };
@@ -170,22 +141,21 @@ export const challengeListing = async (productId: string, challengeComment: stri
   const { data, error } = await supabase
     .from('products')
     .update({
-      approval_status: 'challenged',
-      challenge_reason: challengeComment,
-      updated_at: new Date().toISOString(),
+      approval_status: 'pending_review', // Reset for re-review after challenge
+      challenge_reason: challengeComment, // Save the seller's challenge comment
+      updated_at: new Date().toISOString()
     })
     .eq('id', productId)
     .select();
-  
+
   if (error) {
-    console.error('Error challenging listing:', error);
+    console.error('Error challenging product:', error);
     return false;
   }
   if (!data || data.length === 0) {
-    console.error('No rows updated for challenge on product id:', productId);
+    console.error('No rows updated for product id:', productId);
     return false;
   }
-  console.log('Challenged listing data:', data);
   return true;
 };
 
@@ -194,7 +164,7 @@ export const getSellerListings = async (sellerId: string): Promise<Product[]> =>
     .from('products')
     .select('*')
     .eq('seller_id', sellerId);
-    console.log(data);
+  console.log(data);
   if (error) {
     console.error('Error fetching seller listings:', error);
     return [];
@@ -214,22 +184,29 @@ export const getSellerListingsInventory = async (sellerId: string): Promise<Prod
   }
   return data
     ? data.map((row) => {
+      console.log(row);
         const product = convertProductRowToProduct(row);
-        // Preserve template and template_fields from the original row
-        product.template = (row as any).template;
-        (product as any).template_fields = (row as any).template_fields;
-        return product;
+        console.log(product);
+        // Return a new object that preserves the extra fields.
+        return {
+          ...product,
+          template: (row as any).template,
+          template_fields: (row as any).template_fields,
+          approval_status: (row as any).approval_status
+        };
       })
     : [];
 };
 
 export const togglePublishStatus = async (productId: string, publish: boolean): Promise<boolean> => {
-  const newStatus = publish ? 'published' : 'pending'; // Change to 'draft' if applicable
+  // For listings not requiring review, set status to "published".
+  // For listings that need review, leave as "pending" (or "pending_review").
+  const newStatus = publish ? 'published' : 'pending';
   const { data, error } = await supabase
     .from('products')
     .update({
       approval_status: newStatus,
-      updated_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
     })
     .eq('id', productId)
     .select();
@@ -251,7 +228,7 @@ export const updateListing = async (productId: string, updatedFields: Partial<Pr
       .from('products')
       .update({
         ...updatedFields,
-        updated_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
       })
       .eq('id', productId)
       .select();

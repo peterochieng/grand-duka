@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import Layout from '@/components/Layout';
 import { ProductCard } from '@/components/ProductCard';
@@ -8,33 +7,46 @@ import { Separator } from '@/components/ui/separator';
 import { Car, FileCheck, Search } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import { useCategories } from '@/hooks/useCategories';
 
 const CategoryPage = () => {
-  const { categoryName } = useParams<{ categoryName: string }>();
-  const formattedName = categoryName ? categoryName.charAt(0).toUpperCase() + categoryName.slice(1) : '';
+  const { name } = useParams<{ categoryId: string }>();
+  const { categories, loading: catLoading } = useCategories();
   const [searchQuery, setSearchQuery] = useState('');
-  
-  // Get products for this category
-  const allCategoryProducts = getProductsByCategory(formattedName);
-  
+  const [allCategoryProducts, setAllCategoryProducts] = useState<any[]>([]);
+
+  const categoryDetails = categories.find(c => c.id === name);
+  const categoryName = categoryDetails ? categoryDetails.name : '';
+
+  useEffect(() => {
+    const fetchProducts = async () => {
+      if (!name) return;
+      const products = await getProductsByCategory(name);
+      console.log(products);
+      // Filter for only published products
+      const publishedProducts = products.filter(product => product.approval_status === 'published');
+      setAllCategoryProducts(publishedProducts);
+    };
+
+    fetchProducts();
+  }, [name]);
+
   // Filter products based on search query
-  const products = searchQuery 
-    ? allCategoryProducts.filter(product => 
+  const products = searchQuery
+    ? allCategoryProducts.filter(product =>
         product.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
         product.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
         (product.tags && product.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase())))
       )
     : allCategoryProducts;
-  
-  // Check if this is the vehicles category
-  const isVehiclesCategory = formattedName === 'Vehicles';
+
+  const isVehiclesCategory = categoryName.toLowerCase() === 'vehicles';
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     console.log("Searching in category:", searchQuery);
-    // Search is already handled by the filter above
   };
-  
+
   return (
     <Layout>
       <div className="w-full">
@@ -43,24 +55,24 @@ const CategoryPage = () => {
             <div className="flex flex-col gap-2">
               <h1 className="text-3xl font-bold flex items-center">
                 {isVehiclesCategory && <Car className="mr-2 h-6 w-6" />}
-                {formattedName}
+                {categoryName}
                 {isVehiclesCategory && " Category"}
               </h1>
               <p className="text-muted-foreground">
-                Browse our selection of {categoryName?.toLowerCase()} products
+                Browse our selection of {categoryName.toLowerCase()} products
                 {isVehiclesCategory && " with detailed inspection reports"}
               </p>
             </div>
-            
+
             <Separator className="my-4" />
-            
+
             {/* Search bar */}
             <form onSubmit={handleSearch} className="my-2">
               <div className="flex gap-2">
                 <div className="relative flex-1">
                   <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                   <Input
-                    placeholder={`Search in ${formattedName}...`}
+                    placeholder={`Search in ${categoryName}...`}
                     className="pl-10"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
@@ -72,7 +84,7 @@ const CategoryPage = () => {
                 </Button>
               </div>
             </form>
-            
+
             {products.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                 {products.map(product => (
@@ -98,7 +110,7 @@ const CategoryPage = () => {
                 )}
               </div>
             )}
-            
+
             {isVehiclesCategory && (
               <div className="mt-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-100 dark:border-blue-800">
                 <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400 font-medium mb-2">
